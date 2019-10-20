@@ -25,13 +25,33 @@ def list_snapshots():
 
 def create_snapshot(filesystem, snapshot_name):
     cmd = ['zfs', 'snapshot', f'{filesystem}@{snapshot_name}']
-    out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
-    return out
+
+def create_filesystem(filesystem):
+    cmd = ['zfs', 'create', filesystem]
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
 def destroy_snapshot(filesystem, snapshot_name):
     cmd = ['zfs', 'destroy', f'{filesystem}@{snapshot_name}']
-    out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
-    return out
+
+def destroy_filesystem(filesystem):
+    cmd = ['zfs', 'destroy', '-r', filesystem]
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
+
+
+def open_snapshot_stream(filesystem, snapshot_name, mode):
+    if mode is 'r':
+        cmd = ['zfs', 'send', f'{filesystem}@{snapshot_name}']
+        return subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+    elif mode is 'w':
+        cmd = ['zfs', 'receive', f'{filesystem}@{snapshot_name}']
+        return subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+    else:
+        raise ValueError('Mode must be r or w')
