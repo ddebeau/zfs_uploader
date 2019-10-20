@@ -21,6 +21,7 @@ class ZFSTests(unittest.TestCase):
         self.assertEqual(0, out.returncode, msg=out.stderr)
 
     def test_create_snapshot(self):
+        """ Create snapshot. """
         # When
         out = create_snapshot(self.filesystem, self.snapshot_name)
         self.assertEqual(0, out.returncode, msg=out.stderr)
@@ -30,7 +31,8 @@ class ZFSTests(unittest.TestCase):
         self.assertIn(f'{self.filesystem}@{self.snapshot_name}',
                       list(out.keys()))
 
-    def test_create_send_stream(self):
+    def test_restore_filesystem(self):
+        """ Restore filesystem from snapshot stream. """
         # Given
         out = create_snapshot(self.filesystem, self.snapshot_name)
         self.assertEqual(0, out.returncode, msg=out.stderr)

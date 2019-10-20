@@ -6,6 +6,7 @@ SUBPROCESS_KWARGS = dict(stdout=subprocess.PIPE,
 
 
 def list_snapshots():
+    """ List snapshots. """
     cmd = ['zfs', 'list', '-t', 'snapshot']
     out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
@@ -24,26 +25,31 @@ def list_snapshots():
 
 
 def create_snapshot(filesystem, snapshot_name):
+    """ Create filesystem snapshot. """
     cmd = ['zfs', 'snapshot', f'{filesystem}@{snapshot_name}']
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
 def create_filesystem(filesystem):
+    """ Create filesystem. """
     cmd = ['zfs', 'create', filesystem]
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
 def destroy_snapshot(filesystem, snapshot_name):
+    """ Destroy filesystem snapshot. """
     cmd = ['zfs', 'destroy', f'{filesystem}@{snapshot_name}']
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
 def destroy_filesystem(filesystem):
+    """ Destroy filesystem and filesystem snapshots. """
     cmd = ['zfs', 'destroy', '-r', filesystem]
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
 def open_snapshot_stream(filesystem, snapshot_name, mode):
+    """ Open snapshot stream. """
     if mode is 'r':
         cmd = ['zfs', 'send', f'{filesystem}@{snapshot_name}']
         return subprocess.Popen(cmd, stdout=subprocess.PIPE,
