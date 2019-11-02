@@ -1,9 +1,9 @@
 import os
 import unittest
 
-from zfs import (create_filesystem, create_snapshot, destroy_filesystem,
-                 open_snapshot_stream, open_snapshot_stream_inc,
-                 list_snapshots)
+from zfs_uploader.zfs import (create_filesystem, create_snapshot,
+                              destroy_filesystem, open_snapshot_stream,
+                              open_snapshot_stream_inc, list_snapshots)
 
 
 class ZFSTests(unittest.TestCase):

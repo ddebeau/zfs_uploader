@@ -2,8 +2,8 @@ from io import BytesIO
 import unittest
 import warnings
 
-from config import Config
-from upload import get_s3_client
+from zfs_uploader.config import Config
+from zfs_uploader.upload import get_s3_client
 
 
 class MyTestCase(unittest.TestCase):

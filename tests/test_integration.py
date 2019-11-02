@@ -1,10 +1,10 @@
 import unittest
 import warnings
 
-from config import Config
-from upload import get_s3_client
-from zfs import (create_filesystem, create_snapshot, destroy_filesystem,
-                 open_snapshot_stream)
+from zfs_uploader.config import Config
+from zfs_uploader.upload import get_s3_client
+from zfs_uploader.zfs import (create_filesystem, create_snapshot,
+                              destroy_filesystem, open_snapshot_stream)
 
 
 class IntegrationTests(unittest.TestCase):
