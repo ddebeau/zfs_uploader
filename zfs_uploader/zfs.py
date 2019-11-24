@@ -5,6 +5,10 @@ SUBPROCESS_KWARGS = dict(stdout=subprocess.PIPE,
                          encoding='utf-8')
 
 
+class ZFSError(Exception):
+    """ Baseclass for ZFS exceptions. """
+
+
 def list_snapshots():
     """ List snapshots. """
     cmd = ['zfs', 'list', '-t', 'snapshot']

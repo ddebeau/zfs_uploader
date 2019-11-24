@@ -1,10 +1,10 @@
 import boto3
 
 
-def get_s3_client(config):
-    """ Get s3 client. """
-    s3 = boto3.client(service_name='s3',
-                      region_name=config.region,
-                      aws_access_key_id=config.access_key,
-                      aws_secret_access_key=config.secret_key)
+def get_s3_resource(region, access_key, secret_key):
+    """ Get s3 resouce. """
+    s3 = boto3.resource(service_name='s3',
+                        region_name=region,
+                        aws_access_key_id=access_key,
+                        aws_secret_access_key=secret_key)
     return s3

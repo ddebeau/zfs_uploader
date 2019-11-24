@@ -2,7 +2,6 @@ import unittest
 import warnings
 
 from zfs_uploader.config import Config
-from zfs_uploader.upload import get_s3_client
 from zfs_uploader.zfs import (create_filesystem, create_snapshot,
                               destroy_filesystem, open_snapshot_stream)
 
@@ -13,10 +12,10 @@ class IntegrationTests(unittest.TestCase):
         warnings.filterwarnings("ignore", category=ResourceWarning,
                                 message="unclosed.*<ssl.SSLSocket.*>")
 
-        self.config = Config()
-        self.s3 = get_s3_client(self.config)
-        self.bucket = self.config.bucket
-        self.filesystem = 'hgstPool/test'
+        config = Config('../config.cfg')
+        self.job = next(iter(config.jobs.values()))
+        self.bucket = self.job.bucket
+        self.filesystem = self.job.filesystem
         self.snapshot_name = 'snap'
         self.test_file = f'/{self.filesystem}/test_file'
 
@@ -30,7 +29,8 @@ class IntegrationTests(unittest.TestCase):
         out = destroy_filesystem(self.filesystem)
         self.assertEqual(0, out.returncode, msg=out.stderr)
 
-        self.s3.delete_object(Bucket=self.bucket, Key=self.snapshot_name)
+        self.bucket.delete_objects(
+            Delete={'Objects': [{'Key': self.snapshot_name}]})
 
     def test_restore_filesystem(self):
         """ Restore filesystem from S3. """
@@ -41,7 +41,7 @@ class IntegrationTests(unittest.TestCase):
         # When
         with open_snapshot_stream(self.filesystem, self.snapshot_name,
                                   'r') as f:
-            self.s3.upload_fileobj(f.stdout, self.bucket, self.snapshot_name)
+            self.bucket.upload_fileobj(f.stdout, self.snapshot_name)
             stderr = f.stderr.read().decode('utf-8')
         self.assertEqual(0, f.returncode, msg=stderr)
 
@@ -51,7 +51,7 @@ class IntegrationTests(unittest.TestCase):
         # Then
         with open_snapshot_stream(self.filesystem, self.snapshot_name,
                                   'w') as f:
-            self.s3.download_fileobj(self.bucket, self.snapshot_name, f.stdin)
+            self.bucket.download_fileobj(self.snapshot_name, f.stdin)
             stderr = f.stderr.read().decode('utf-8')
         self.assertEqual(0, f.returncode, msg=stderr)
 
