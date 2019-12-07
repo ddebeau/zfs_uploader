@@ -21,11 +21,26 @@ class Config:
         self._jobs = {}
         for k, v in self._cfg.items():
             if k is not 'DEFAULT':
+                cron_dict = None
+                if v.get('cron'):
+                    cron_dict = _create_cron_dict(v.get('cron'))
+
                 self._jobs[k] = (
                     ZFSjob(v.get('bucket') or default.get('bucket'),
                            v.get('access_key') or default.get('access_key'),
                            v.get('secret_key') or default.get('secret_key'),
                            filesystem=k,
-                           region=v.get('region') or default.get('region')
+                           region=v.get('region') or default.get('region'),
+                           cron=cron_dict
                            )
                 )
+
+
+def _create_cron_dict(cron):
+    values = cron.split()
+
+    return {'minute': values[0],
+            'hour': values[1],
+            'day': values[2],
+            'month': values[3],
+            'day_of_week': values[4]}

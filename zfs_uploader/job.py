@@ -47,8 +47,13 @@ class ZFSjob:
         """ S3 resource. """
         return self._s3
 
+    @property
+    def cron(self):
+        """ Cron schedule """
+        return self._cron
+
     def __init__(self, bucket, access_key, secret_key, filesystem,
-                 region='us-east-1'):
+                 region='us-east-1', cron=None):
         """ Construct ZFS backup job. """
         self._bucket = bucket
         self._region = region
@@ -58,6 +63,7 @@ class ZFSjob:
 
         self._s3 = _get_s3_resource(self._region, self._access_key,
                                     self._secret_key)
+        self._cron = cron
 
     def start(self):
         """ Start ZFS backup job. """
