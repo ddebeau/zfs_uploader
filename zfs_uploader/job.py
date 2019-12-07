@@ -3,8 +3,8 @@ from io import BytesIO
 import json
 
 from botocore.exceptions import ClientError
+import boto3
 
-from zfs_uploader.upload import get_s3_resource
 from zfs_uploader.zfs import (create_snapshot, open_snapshot_stream,
                               open_snapshot_stream_inc, ZFSError)
 
@@ -56,8 +56,8 @@ class ZFSjob:
         self._secret_key = secret_key
         self._filesystem = filesystem
 
-        self._s3 = get_s3_resource(self._region, self._access_key,
-                                   self._secret_key)
+        self._s3 = _get_s3_resource(self._region, self._access_key,
+                                    self._secret_key)
 
     def start(self):
         """ Start ZFS backup job. """
@@ -190,3 +190,12 @@ class ZFSjob:
 
 def _get_date_time():
     return datetime.now().strftime(DATETIME_FORMAT)
+
+
+def _get_s3_resource(region, access_key, secret_key):
+    """ Get s3 resouce. """
+    s3 = boto3.resource(service_name='s3',
+                        region_name=region,
+                        aws_access_key_id=access_key,
+                        aws_secret_access_key=secret_key)
+    return s3
