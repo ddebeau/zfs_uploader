@@ -32,19 +32,21 @@ class JobTests(unittest.TestCase):
             item.delete()
 
     def test_start_full(self):
+        """ Test job start with full backup. """
         # When
         self.job.start()
 
         # Then
-        for item in self.bucket.objects.all():
-            self.assertIn('full', item.key)
+        backup_info = self.job._get_backup_info()
+        self.assertEqual('full', backup_info[-1]['backup_type'])
 
     def test_start_incremental(self):
+        """ Test job start with incremental backup. """
         # Given
         self.job.start()
 
-        for item in self.bucket.objects.all():
-            self.assertIn('full', item.key)
+        backup_info = self.job._get_backup_info()
+        self.assertEqual('full', backup_info[-1]['backup_type'])
 
         # wait until snapshot name changes
         sleep(1)
@@ -52,9 +54,6 @@ class JobTests(unittest.TestCase):
         # When
         self.job.start()
 
-        backup_inc = []
-        for item in self.bucket.objects.all():
-            if 'inc' in item.key:
-                backup_inc.append(item.key)
-
-        self.assertEqual(len(backup_inc), 1)
+        # Then
+        backup_info = self.job._get_backup_info()
+        self.assertEqual('inc', backup_info[-1]['backup_type'])

@@ -1,4 +1,8 @@
 from datetime import datetime
+from io import BytesIO
+import json
+
+from botocore.exceptions import ClientError
 
 from zfs_uploader.upload import get_s3_resource
 from zfs_uploader.zfs import (create_snapshot, open_snapshot_stream,
@@ -60,15 +64,15 @@ class ZFSjob:
         backup_info = self._get_backup_info()
 
         if backup_info:
-            backup_full = None
-            for item in backup_info:
+            backup_time = None
+            for item in reversed(backup_info):
                 # find the most recent full backup
-                if item['type'] == 'full':
-                    backup_full = item['datetime'].strftime(DATETIME_FORMAT)
+                if item['backup_type'] == 'full':
+                    backup_time = item['backup_time']
                     break
 
-            if backup_full:
-                self._backup_incremental(backup_full)
+            if backup_time:
+                self._backup_incremental(backup_time)
             else:
                 self._backup_full()
 
@@ -76,52 +80,73 @@ class ZFSjob:
             self._backup_full()
 
     def _get_backup_info(self):
-        bucket = self._s3.Bucket(self._bucket)
-        keys = [item.key for item in bucket.objects.all()]
+        info_object = self._s3.Object(self._bucket, 'backup.info')
 
-        backup_info = []
-        for item in keys:
-            if self._filesystem in item:
-                snapshot = item.split('/')[-1]
-                date_str, backup_type = snapshot.split('.')
-                backup_info.append(
-                    {'datetime': datetime.strptime(date_str, DATETIME_FORMAT),
-                     'type': backup_type})
+        try:
+            with BytesIO() as f:
+                info_object.download_fileobj(f)
+                f.seek(0)
+                return json.load(f)
 
-        return sorted(backup_info, key=lambda x: x['datetime'], reverse=True)
+        except ClientError:
+            return []
+
+    def _set_backup_info(self, key, file_system, backup_time, backup_type):
+        info_object = self._s3.Object(self._bucket, 'backup.info')
+
+        try:
+            with BytesIO() as f:
+                info_object.download_fileobj(f)
+                f.seek(0)
+                backup_info = json.load(f)
+
+        except ClientError:
+            backup_info = []
+
+        backup_info.append({'key': key,
+                            'file_system': file_system,
+                            'backup_time': backup_time,
+                            'backup_type': backup_type})
+
+        with BytesIO() as f:
+            f.write(json.dumps(backup_info).encode('utf-8'))
+            f.seek(0)
+            info_object.upload_fileobj(f)
 
     def _backup_full(self):
-        snapshot = self._create_snapshot()
-        backup = f'{self._filesystem}/{snapshot}.full'
+        backup_time = self._create_snapshot()
+        backup = f'{self._filesystem}/{backup_time}.full'
         bucket = self._s3.Bucket(self._bucket)
-        with open_snapshot_stream(self.filesystem, snapshot, 'r') as f:
+        with open_snapshot_stream(self.filesystem, backup_time, 'r') as f:
             bucket.upload_fileobj(f.stdout, backup)
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
 
         self._check_backup(backup)
+        self._set_backup_info(backup, self._filesystem, backup_time, 'full')
 
     def _backup_incremental(self, snapshot_1):
-        snapshot_2 = self._create_snapshot()
-        backup = f'{self._filesystem}/{snapshot_2}.inc'
+        backup_time = self._create_snapshot()
+        backup = f'{self._filesystem}/{backup_time}.inc'
         bucket = self._s3.Bucket(self._bucket)
         with open_snapshot_stream_inc(
-                self.filesystem, snapshot_1, snapshot_2) as f:
+                self.filesystem, snapshot_1, backup_time) as f:
             bucket.upload_fileobj(f.stdout, backup)
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
 
         self._check_backup(backup)
+        self._set_backup_info(backup, self._filesystem, backup_time, 'inc')
 
     def _create_snapshot(self):
-        snapshot = _get_date_time()
-        out = create_snapshot(self.filesystem, snapshot)
+        backup_time = _get_date_time()
+        out = create_snapshot(self.filesystem, backup_time)
         if out.returncode:
             raise ZFSError(out.stderr)
 
-        return snapshot
+        return backup_time
 
     def _check_backup(self, backup):
         # load() will fail if object does not exist
