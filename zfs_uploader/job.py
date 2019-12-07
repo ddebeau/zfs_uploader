@@ -101,7 +101,8 @@ class ZFSjob:
             print('No backup_info file exists.')
 
     def _get_backup_info(self):
-        info_object = self._s3.Object(self._bucket, 'backup.info')
+        info_object = self._s3.Object(self._bucket,
+                                      f'{self._filesystem}/backup.info')
 
         try:
             with BytesIO() as f:
@@ -113,7 +114,8 @@ class ZFSjob:
             return []
 
     def _set_backup_info(self, key, file_system, backup_time, backup_type):
-        info_object = self._s3.Object(self._bucket, 'backup.info')
+        info_object = self._s3.Object(self._bucket,
+                                      f'{self._filesystem}/backup.info')
 
         try:
             with BytesIO() as f:
