@@ -57,3 +57,26 @@ class JobTests(unittest.TestCase):
         # Then
         backup_info = self.job._get_backup_info()
         self.assertEqual('inc', backup_info[-1]['backup_type'])
+
+    def test_restore_from_increment(self):
+        """ Test restore from incremental backup. """
+        # Given
+        self.job.start()
+
+        with open(self.test_file, 'a') as f:
+            f.write('append')
+
+        # wait until snapshot name changes
+        sleep(1)
+        self.job.start()
+
+        out = destroy_filesystem(self.job.filesystem)
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # When
+        self.job.restore()
+
+        # Then
+        with open(self.test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data + 'append', out)

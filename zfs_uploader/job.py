@@ -65,10 +65,10 @@ class ZFSjob:
 
         if backup_info:
             backup_time = None
-            for item in reversed(backup_info):
+            for backup in reversed(backup_info):
                 # find the most recent full backup
-                if item['backup_type'] == 'full':
-                    backup_time = item['backup_time']
+                if backup['backup_type'] == 'full':
+                    backup_time = backup['backup_time']
                     break
 
             if backup_time:
@@ -78,6 +78,27 @@ class ZFSjob:
 
         else:
             self._backup_full()
+
+    def restore(self):
+        """ Restore from most recent backup. """
+        backup_info = self._get_backup_info()
+
+        if backup_info:
+            backup_last = backup_info.pop()
+
+            if backup_last['backup_type'] == 'full':
+                self._restore_snapshot(backup_last)
+
+            elif backup_last['backup_type'] == 'inc':
+                for backup in reversed(backup_info):
+                    # find the most recent full backup
+                    if backup['backup_type'] == 'full':
+                        self._restore_snapshot(backup)
+                        break
+
+                self._restore_snapshot(backup_last)
+        else:
+            print('No backup_info file exists.')
 
     def _get_backup_info(self):
         info_object = self._s3.Object(self._bucket, 'backup.info')
@@ -139,6 +160,17 @@ class ZFSjob:
 
         self._check_backup(backup)
         self._set_backup_info(backup, self._filesystem, backup_time, 'inc')
+
+    def _restore_snapshot(self, backup):
+        backup_time = backup['backup_time']
+        backup_key = backup['key']
+        backup_object = self._s3.Object(self._bucket, backup_key)
+
+        with open_snapshot_stream(self.filesystem, backup_time, 'w') as f:
+            backup_object.download_fileobj(f.stdin)
+            stderr = f.stderr.read().decode('utf-8')
+        if f.returncode:
+            raise ZFSError(stderr)
 
     def _create_snapshot(self):
         backup_time = _get_date_time()
