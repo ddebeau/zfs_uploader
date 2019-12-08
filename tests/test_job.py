@@ -3,7 +3,8 @@ import unittest
 import warnings
 
 from zfs_uploader.config import Config
-from zfs_uploader.zfs import create_filesystem, destroy_filesystem
+from zfs_uploader.zfs import (create_filesystem, destroy_filesystem,
+                              list_snapshots)
 
 
 class JobTests(unittest.TestCase):
@@ -80,3 +81,28 @@ class JobTests(unittest.TestCase):
         with open(self.test_file, 'r') as f:
             out = f.read()
         self.assertEqual(self.test_data + 'append', out)
+
+    def test_limit_snapshots(self):
+        """ Test the snapshot number limiter. """
+        # Given
+        self.job._max_snapshots = 4
+
+        self.job.start()
+        sleep(1)
+        self.job.start()
+        sleep(1)
+        self.job.start()
+        sleep(1)
+        self.job.start()
+
+        snapshot_keys = list(list_snapshots().keys())
+        self.assertEqual(4, len(snapshot_keys))
+
+        # When
+        self.job._max_snapshots = 2
+        self.job._limit_snapshots()
+
+        # Then
+        # The two most recent snapshots should exist.
+        out = list(list_snapshots().keys())
+        self.assertEqual(snapshot_keys[-2:], out)

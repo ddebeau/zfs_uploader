@@ -22,17 +22,21 @@ class Config:
         for k, v in self._cfg.items():
             if k is not 'DEFAULT':
                 cron_dict = None
-                if v.get('cron'):
-                    cron_dict = _create_cron_dict(v.get('cron'))
+                cron = v.get('cron') or default.get('cron')
+                if cron:
+                    cron_dict = _create_cron_dict(cron)
 
                 self._jobs[k] = (
-                    ZFSjob(v.get('bucket') or default.get('bucket'),
-                           v.get('access_key') or default.get('access_key'),
-                           v.get('secret_key') or default.get('secret_key'),
-                           filesystem=k,
-                           region=v.get('region') or default.get('region'),
-                           cron=cron_dict
-                           )
+                    ZFSjob(
+                        v.get('bucket') or default.get('bucket'),
+                        v.get('access_key') or default.get('access_key'),
+                        v.get('secret_key') or default.get('secret_key'),
+                        filesystem=k,
+                        region=v.get('region') or default.get('region'),
+                        cron=cron_dict,
+                        max_snapshots=v.getint('max_snapshots') or
+                                      default.getint('max_snapshots')
+                    )
                 )
 
 

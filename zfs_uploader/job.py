@@ -6,7 +6,8 @@ from botocore.exceptions import ClientError
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-from zfs_uploader.zfs import (create_snapshot, open_snapshot_stream,
+from zfs_uploader.zfs import (create_snapshot, destroy_snapshot,
+                              list_snapshots, open_snapshot_stream,
                               open_snapshot_stream_inc, ZFSError)
 
 DATETIME_FORMAT = '%Y%m%d_%H%M%S'
@@ -50,11 +51,16 @@ class ZFSjob:
 
     @property
     def cron(self):
-        """ Cron schedule """
+        """ Cron schedule. """
         return self._cron
 
+    @property
+    def max_snapshots(self):
+        """ Maximum number of snapshots. """
+        return self._max_snapshots
+
     def __init__(self, bucket, access_key, secret_key, filesystem,
-                 region='us-east-1', cron=None):
+                 region='us-east-1', cron=None, max_snapshots=None):
         """ Construct ZFS backup job. """
         self._bucket = bucket
         self._region = region
@@ -68,6 +74,7 @@ class ZFSjob:
                                   aws_secret_access_key=self._secret_key)
         self._s3_transfer_config = TransferConfig(max_concurrency=20)
         self._cron = cron
+        self._max_snapshots = max_snapshots
 
     def start(self):
         """ Start ZFS backup job. """
@@ -88,6 +95,8 @@ class ZFSjob:
 
         else:
             self._backup_full()
+
+        self._limit_snapshots()
 
     def restore(self):
         """ Restore from most recent backup. """
@@ -196,6 +205,13 @@ class ZFSjob:
             raise ZFSError(out.stderr)
 
         return backup_time
+
+    def _limit_snapshots(self):
+        snapshot_keys = list(list_snapshots().keys())
+
+        while len(snapshot_keys) > self._max_snapshots:
+            snapshot = snapshot_keys.pop(0)
+            destroy_snapshot(self._filesystem, snapshot.split('@')[1])
 
     def _check_backup(self, backup):
         # load() will fail if object does not exist
