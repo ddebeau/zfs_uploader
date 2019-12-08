@@ -1,4 +1,3 @@
-from time import sleep
 import unittest
 import warnings
 
@@ -49,9 +48,6 @@ class JobTests(unittest.TestCase):
         backup_info = self.job._get_backup_info()
         self.assertEqual('full', backup_info[-1]['backup_type'])
 
-        # wait until snapshot name changes
-        sleep(1)
-
         # When
         self.job.start()
 
@@ -66,9 +62,6 @@ class JobTests(unittest.TestCase):
 
         with open(self.test_file, 'a') as f:
             f.write('append')
-
-        # wait until snapshot name changes
-        sleep(1)
         self.job.start()
 
         out = destroy_filesystem(self.job.filesystem)
@@ -87,13 +80,8 @@ class JobTests(unittest.TestCase):
         # Given
         self.job._max_snapshots = 4
 
-        self.job.start()
-        sleep(1)
-        self.job.start()
-        sleep(1)
-        self.job.start()
-        sleep(1)
-        self.job.start()
+        for _ in range(4):
+            self.job.start()
 
         snapshot_keys = list(list_snapshots().keys())
         self.assertEqual(4, len(snapshot_keys))

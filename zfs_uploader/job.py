@@ -1,6 +1,7 @@
 from datetime import datetime
 from io import BytesIO
 import json
+from time import sleep
 
 from botocore.exceptions import ClientError
 import boto3
@@ -200,7 +201,12 @@ class ZFSjob:
 
     def _create_snapshot(self):
         backup_time = _get_date_time()
-        out = create_snapshot(self.filesystem, backup_time)
+
+        if f'{self._filesystem}@{backup_time}' in list_snapshots():
+            sleep(1)
+
+        backup_time = _get_date_time()
+        out = create_snapshot(self._filesystem, backup_time)
         if out.returncode:
             raise ZFSError(out.stderr)
 
