@@ -4,6 +4,7 @@ import json
 
 from botocore.exceptions import ClientError
 import boto3
+from boto3.s3.transfer import TransferConfig
 
 from zfs_uploader.zfs import (create_snapshot, open_snapshot_stream,
                               open_snapshot_stream_inc, ZFSError)
@@ -61,8 +62,11 @@ class ZFSjob:
         self._secret_key = secret_key
         self._filesystem = filesystem
 
-        self._s3 = _get_s3_resource(self._region, self._access_key,
-                                    self._secret_key)
+        self._s3 = boto3.resource(service_name='s3',
+                                  region_name=self._region,
+                                  aws_access_key_id=self._access_key,
+                                  aws_secret_access_key=self._secret_key)
+        self._s3_transfer_config = TransferConfig(max_concurrency=20)
         self._cron = cron
 
     def start(self):
@@ -147,7 +151,9 @@ class ZFSjob:
         backup = f'{self._filesystem}/{backup_time}.full'
         bucket = self._s3.Bucket(self._bucket)
         with open_snapshot_stream(self.filesystem, backup_time, 'r') as f:
-            bucket.upload_fileobj(f.stdout, backup)
+            bucket.upload_fileobj(f.stdout,
+                                  backup,
+                                  Config=self._s3_transfer_config)
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
@@ -161,7 +167,9 @@ class ZFSjob:
         bucket = self._s3.Bucket(self._bucket)
         with open_snapshot_stream_inc(
                 self.filesystem, snapshot_1, backup_time) as f:
-            bucket.upload_fileobj(f.stdout, backup)
+            bucket.upload_fileobj(f.stdout,
+                                  backup,
+                                  Config=self._s3_transfer_config)
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
@@ -175,7 +183,8 @@ class ZFSjob:
         backup_object = self._s3.Object(self._bucket, backup_key)
 
         with open_snapshot_stream(self.filesystem, backup_time, 'w') as f:
-            backup_object.download_fileobj(f.stdin)
+            backup_object.download_fileobj(f.stdin,
+                                           Config=self._s3_transfer_config)
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
@@ -198,12 +207,3 @@ class ZFSjob:
 
 def _get_date_time():
     return datetime.now().strftime(DATETIME_FORMAT)
-
-
-def _get_s3_resource(region, access_key, secret_key):
-    """ Get s3 resouce. """
-    s3 = boto3.resource(service_name='s3',
-                        region_name=region,
-                        aws_access_key_id=access_key,
-                        aws_secret_access_key=secret_key)
-    return s3
