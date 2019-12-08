@@ -1,15 +1,19 @@
 import os
 import unittest
 
+from zfs_uploader.config import Config
 from zfs_uploader.zfs import (create_filesystem, create_snapshot,
-                              destroy_filesystem, open_snapshot_stream,
+                              destroy_filesystem, destroy_snapshot,
+                              open_snapshot_stream,
                               open_snapshot_stream_inc, list_snapshots)
 
 
 class ZFSTests(unittest.TestCase):
     def setUp(self):
         # Given
-        self.filesystem = 'hgstPool/test'
+        config = Config('../config.cfg')
+        job = next(iter(config.jobs.values()))
+        self.filesystem = job.filesystem
         self.snapshot_name = 'snap_1'
         self.test_file = f'/{self.filesystem}/test_file'
         self.test_data = str(list(range(100_000)))
@@ -142,3 +146,22 @@ class ZFSTests(unittest.TestCase):
         out = destroy_filesystem(self.filesystem)
         self.assertEqual(0, out.returncode, msg=out.stderr)
         self.assertFalse(os.path.isfile(self.test_file))
+
+    def test_destroy_snapshot(self):
+        """ Destroy snapshot. """
+        # Given
+        out = create_snapshot(self.filesystem, self.snapshot_name)
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        out = create_snapshot(self.filesystem, 'snap_2')
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # When
+        out = destroy_snapshot(self.filesystem, self.snapshot_name)
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # Then
+        out = list_snapshots()
+        self.assertNotIn(f'{self.filesystem}@{self.snapshot_name}',
+                         list(out.keys()))
+        self.assertIn(f'{self.filesystem}@snap_2', list(out.keys()))
