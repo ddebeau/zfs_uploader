@@ -60,8 +60,14 @@ class ZFSjob:
         """ Maximum number of snapshots. """
         return self._max_snapshots
 
+    @property
+    def max_incremental_backups(self):
+        """ Maximum number of incremental backups. """
+        return self._max_incremental_backups
+
     def __init__(self, bucket, access_key, secret_key, filesystem,
-                 region='us-east-1', cron=None, max_snapshots=None):
+                 region='us-east-1', cron=None, max_snapshots=None,
+                 max_incremental_backups=None):
         """ Construct ZFS backup job. """
         self._bucket = bucket
         self._region = region
@@ -76,10 +82,11 @@ class ZFSjob:
         self._s3_transfer_config = TransferConfig(max_concurrency=20)
         self._cron = cron
         self._max_snapshots = max_snapshots
+        self._max_incremental_backups = max_incremental_backups
 
     def start(self):
         """ Start ZFS backup job. """
-        backup_info = self._get_backup_info()
+        backup_info = self._read_backup_info()
 
         if backup_info:
             backup_time = None
@@ -97,11 +104,14 @@ class ZFSjob:
         else:
             self._backup_full()
 
-        self._limit_snapshots()
+        if self._max_snapshots:
+            self._limit_snapshots()
+        if self._max_incremental_backups:
+            self._limit_backups()
 
     def restore(self):
         """ Restore from most recent backup. """
-        backup_info = self._get_backup_info()
+        backup_info = self._read_backup_info()
 
         if backup_info:
             backup_last = backup_info.pop()
@@ -120,10 +130,9 @@ class ZFSjob:
         else:
             print('No backup_info file exists.')
 
-    def _get_backup_info(self):
+    def _read_backup_info(self):
         info_object = self._s3.Object(self._bucket,
                                       f'{self._filesystem}/backup.info')
-
         try:
             with BytesIO() as f:
                 info_object.download_fileobj(f)
@@ -133,28 +142,26 @@ class ZFSjob:
         except ClientError:
             return []
 
-    def _set_backup_info(self, key, file_system, backup_time, backup_type):
+    def _write_backup_info(self, backup_info):
         info_object = self._s3.Object(self._bucket,
                                       f'{self._filesystem}/backup.info')
-
-        try:
-            with BytesIO() as f:
-                info_object.download_fileobj(f)
-                f.seek(0)
-                backup_info = json.load(f)
-
-        except ClientError:
-            backup_info = []
-
-        backup_info.append({'key': key,
-                            'file_system': file_system,
-                            'backup_time': backup_time,
-                            'backup_type': backup_type})
-
         with BytesIO() as f:
             f.write(json.dumps(backup_info).encode('utf-8'))
             f.seek(0)
             info_object.upload_fileobj(f)
+
+    def _set_backup_info(self, key, file_system, backup_time, backup_type):
+        backup_info = self._read_backup_info()
+        backup_info.append({'key': key,
+                            'file_system': file_system,
+                            'backup_time': backup_time,
+                            'backup_type': backup_type})
+        self._write_backup_info(backup_info)
+
+    def _del_backup_info(self, key):
+        backup_info = self._read_backup_info()
+        backup_info = [item for item in backup_info if item['key'] != key]
+        self._write_backup_info(backup_info)
 
     def _backup_full(self):
         backup_time = self._create_snapshot()
@@ -219,12 +226,31 @@ class ZFSjob:
             snapshot = snapshot_keys.pop(0)
             destroy_snapshot(self._filesystem, snapshot.split('@')[1])
 
-    def _check_backup(self, backup):
+    def _check_backup(self, key):
         # load() will fail if object does not exist
-        backup_object = self._s3.Object(self._bucket, backup)
+        backup_object = self._s3.Object(self._bucket, key)
         backup_object.load()
         if backup_object.content_length == 0:
             raise BackupError('Backup upload failed.')
+
+    def _delete_backup(self, key):
+        backup_object = self._s3.Object(self._bucket, key)
+        backup_object.delete()
+        self._del_backup_info(key)
+
+    def _limit_backups(self):
+        backup_info = self._read_backup_info()
+
+        backups_inc = []
+        for backup in reversed(backup_info):
+            if backup['backup_type'] == 'inc':
+                backups_inc.append(backup['key'])
+            else:
+                break
+
+        while len(backups_inc) > self._max_incremental_backups:
+            key = backups_inc.pop(-1)
+            self._delete_backup(key)
 
 
 def _get_date_time():
