@@ -117,3 +117,4 @@ class JobTests(unittest.TestCase):
         # The two most recent incremental backups should exist.
         out = self.job._read_backup_info()
         self.assertEqual(backup_info[-2:], out[-2:])
+        self.assertEqual(3, len(out))
