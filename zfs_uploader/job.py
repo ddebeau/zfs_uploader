@@ -225,11 +225,17 @@ class ZFSjob:
         return backup_time
 
     def _limit_snapshots(self):
+        backup_info = self._read_backup_info()
         snapshot_keys = list(list_snapshots().keys())
 
         while len(snapshot_keys) > self._max_snapshots:
             snapshot = snapshot_keys.pop(0)
-            destroy_snapshot(self._filesystem, snapshot.split('@')[1])
+            filesystem = snapshot.split('@')[0]
+            backup_time = snapshot.split('@')[1]
+            key = f'{filesystem}/{backup_time}.full'
+
+            if key not in backup_info:
+                destroy_snapshot(filesystem, backup_time)
 
     def _check_backup(self, key):
         # load() will fail if object does not exist

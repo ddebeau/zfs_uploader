@@ -94,10 +94,12 @@ class JobTests(unittest.TestCase):
         self.job._limit_snapshots()
 
         # Then
-        # The two most recent snapshots should exist.
         out = list(list_snapshots().keys())
-        self.assertEqual(snapshot_keys[-2:], out)
-        self.assertEqual(2, len(out))
+        # Check if two most recent snapshots exist.
+        self.assertListEqual(snapshot_keys[-2:], out[-2:])
+        # Check if full snapshot exists.
+        self.assertEqual(snapshot_keys[0], out[0])
+        self.assertEqual(3, len(out))
 
     def test_limit_backups(self):
         """ Test the incremental backup limiter. """
