@@ -89,9 +89,12 @@ class ZFSjob:
         backup_info = self._read_backup_info()
 
         if backup_info:
+            backup_keys = list(backup_info.keys())
             backup_time = None
-            for backup in reversed(backup_info):
+
+            for key in reversed(backup_keys):
                 # find the most recent full backup
+                backup = backup_info[key]
                 if backup['backup_type'] == 'full':
                     backup_time = backup['backup_time']
                     break
@@ -114,19 +117,21 @@ class ZFSjob:
         backup_info = self._read_backup_info()
 
         if backup_info:
-            backup_last = backup_info.pop()
+            backup_keys = list(backup_info.keys())
+            key_last = backup_keys[-1]
 
-            if backup_last['backup_type'] == 'full':
-                self._restore_snapshot(backup_last)
+            if backup_info[key_last]['backup_type'] == 'full':
+                self._restore_snapshot(key_last)
 
-            elif backup_last['backup_type'] == 'inc':
-                for backup in reversed(backup_info):
+            elif backup_info[key_last]['backup_type'] == 'inc':
+                for key in reversed(backup_keys):
                     # find the most recent full backup
+                    backup = backup_info[key]
                     if backup['backup_type'] == 'full':
-                        self._restore_snapshot(backup)
+                        self._restore_snapshot(key)
                         break
 
-                self._restore_snapshot(backup_last)
+                self._restore_snapshot(key_last)
         else:
             print('No backup_info file exists.')
 
@@ -140,7 +145,7 @@ class ZFSjob:
                 return json.load(f)
 
         except ClientError:
-            return []
+            return {}
 
     def _write_backup_info(self, backup_info):
         info_object = self._s3.Object(self._bucket,
@@ -152,15 +157,14 @@ class ZFSjob:
 
     def _set_backup_info(self, key, file_system, backup_time, backup_type):
         backup_info = self._read_backup_info()
-        backup_info.append({'key': key,
-                            'file_system': file_system,
+        backup_info[key] = {'file_system': file_system,
                             'backup_time': backup_time,
-                            'backup_type': backup_type})
+                            'backup_type': backup_type}
         self._write_backup_info(backup_info)
 
     def _del_backup_info(self, key):
         backup_info = self._read_backup_info()
-        backup_info = [item for item in backup_info if item['key'] != key]
+        backup_info.pop(key)
         self._write_backup_info(backup_info)
 
     def _backup_full(self):
@@ -194,10 +198,11 @@ class ZFSjob:
         self._check_backup(backup)
         self._set_backup_info(backup, self._filesystem, backup_time, 'inc')
 
-    def _restore_snapshot(self, backup):
+    def _restore_snapshot(self, key):
+        backup_info = self._read_backup_info()
+        backup = backup_info[key]
         backup_time = backup['backup_time']
-        backup_key = backup['key']
-        backup_object = self._s3.Object(self._bucket, backup_key)
+        backup_object = self._s3.Object(self._bucket, key)
 
         with open_snapshot_stream(self.filesystem, backup_time, 'w') as f:
             backup_object.download_fileobj(f.stdin,
@@ -241,16 +246,21 @@ class ZFSjob:
     def _limit_backups(self):
         backup_info = self._read_backup_info()
 
-        backups_inc = []
-        for backup in reversed(backup_info):
-            if backup['backup_type'] == 'inc':
-                backups_inc.append(backup['key'])
-            else:
-                break
+        if backup_info:
+            backup_keys = list(backup_info.keys())
+            backups_inc = []
 
-        while len(backups_inc) > self._max_incremental_backups:
-            key = backups_inc.pop(-1)
-            self._delete_backup(key)
+            for key in reversed(backup_keys):
+                backup = backup_info[key]
+
+                if backup['backup_type'] == 'inc':
+                    backups_inc.append(key)
+                else:
+                    break
+
+            while len(backups_inc) > self._max_incremental_backups:
+                key = backups_inc.pop(-1)
+                self._delete_backup(key)
 
 
 def _get_date_time():

@@ -38,7 +38,8 @@ class JobTests(unittest.TestCase):
 
         # Then
         backup_info = self.job._read_backup_info()
-        self.assertEqual('full', backup_info[-1]['backup_type'])
+        backup_keys = list(backup_info.keys())
+        self.assertEqual('full', backup_info[backup_keys[-1]]['backup_type'])
 
     def test_start_incremental(self):
         """ Test job start with incremental backup. """
@@ -46,14 +47,16 @@ class JobTests(unittest.TestCase):
         self.job.start()
 
         backup_info = self.job._read_backup_info()
-        self.assertEqual('full', backup_info[-1]['backup_type'])
+        backup_keys = list(backup_info.keys())
+        self.assertEqual('full', backup_info[backup_keys[-1]]['backup_type'])
 
         # When
         self.job.start()
 
         # Then
         backup_info = self.job._read_backup_info()
-        self.assertEqual('inc', backup_info[-1]['backup_type'])
+        backup_keys = list(backup_info.keys())
+        self.assertEqual('inc', backup_info[backup_keys[-1]]['backup_type'])
 
     def test_restore_from_increment(self):
         """ Test restore from incremental backup. """
@@ -107,6 +110,7 @@ class JobTests(unittest.TestCase):
             self.job.start()
 
         backup_info = self.job._read_backup_info()
+        backup_keys = list(backup_info.keys())
         self.assertEqual(5, len(backup_info))
 
         # When
@@ -116,5 +120,6 @@ class JobTests(unittest.TestCase):
         # Then
         # The two most recent incremental backups should exist.
         out = self.job._read_backup_info()
-        self.assertEqual(backup_info[-2:], out[-2:])
+        out_keys = list(out.keys())
+        self.assertEqual(backup_keys[-2:], out_keys[-2:])
         self.assertEqual(3, len(out))
