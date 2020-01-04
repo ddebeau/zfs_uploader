@@ -1,3 +1,4 @@
+import os
 from configparser import ConfigParser
 
 from zfs_uploader.job import ZFSjob
@@ -14,6 +15,9 @@ class Config:
     def __init__(self, file_path=None):
         """ Construct Config object from file. """
         file_path = file_path or 'config.cfg'
+        if not os.path.isfile(file_path):
+            raise IOError('No configuration file found.')
+
         self._cfg = ConfigParser()
         self._cfg.read(file_path)
 
