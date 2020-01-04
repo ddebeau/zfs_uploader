@@ -3,7 +3,7 @@ from apscheduler.schedulers.background import BlockingScheduler
 from zfs_uploader.config import Config
 
 
-if __name__ == '__main__':
+def main():
     config = Config()
     scheduler = BlockingScheduler()
 
@@ -14,3 +14,7 @@ if __name__ == '__main__':
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         pass
+
+
+if __name__ == '__main__':
+    main()
