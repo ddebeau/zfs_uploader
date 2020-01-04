@@ -65,9 +65,14 @@ class ZFSjob:
         """ Maximum number of incremental backups. """
         return self._max_incremental_backups
 
+    @property
+    def storage_class(self):
+        """ S3 storage class. """
+        return self._storage_class
+
     def __init__(self, bucket, access_key, secret_key, filesystem,
                  region='us-east-1', cron=None, max_snapshots=None,
-                 max_incremental_backups=None):
+                 max_incremental_backups=None, storage_class='STANDARD'):
         """ Construct ZFS backup job. """
         self._bucket = bucket
         self._region = region
@@ -83,6 +88,7 @@ class ZFSjob:
         self._cron = cron
         self._max_snapshots = max_snapshots
         self._max_incremental_backups = max_incremental_backups
+        self._storage_class = storage_class
 
     def start(self):
         """ Start ZFS backup job. """
@@ -174,7 +180,10 @@ class ZFSjob:
         with open_snapshot_stream(self.filesystem, backup_time, 'r') as f:
             bucket.upload_fileobj(f.stdout,
                                   backup,
-                                  Config=self._s3_transfer_config)
+                                  Config=self._s3_transfer_config,
+                                  ExtraArgs={
+                                      'StorageClass': self._storage_class
+                                  })
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
@@ -190,7 +199,10 @@ class ZFSjob:
                 self.filesystem, snapshot_1, backup_time) as f:
             bucket.upload_fileobj(f.stdout,
                                   backup,
-                                  Config=self._s3_transfer_config)
+                                  Config=self._s3_transfer_config,
+                                  ExtraArgs={
+                                      'StorageClass': self._storage_class
+                                  })
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)

@@ -34,12 +34,13 @@ class Config:
                         filesystem=k,
                         region=v.get('region') or default.get('region'),
                         cron=cron_dict,
-                        max_snapshots=
-                        v.getint('max_snapshots') or
-                        default.getint('max_snapshots'),
-                        max_incremental_backups=
-                        v.getint('max_incremental_backups') or
-                        default.getint('max_incremental_backups')
+                        max_snapshots=(v.getint('max_snapshots') or
+                                       default.getint('max_snapshots')),
+                        max_incremental_backups=(
+                                v.getint('max_incremental_backups') or
+                                default.getint('max_incremental_backups')),
+                        storage_class=(v.get('storage_class') or
+                                       default.get('storage_class'))
                     )
                 )
 
