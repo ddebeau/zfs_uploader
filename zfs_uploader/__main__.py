@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import sys
 
 from apscheduler.schedulers.background import BlockingScheduler
@@ -13,7 +14,8 @@ def main():
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter(LOG_FORMAT)
 
-    fh = logging.FileHandler('zfs_uploader.log')
+    fh = RotatingFileHandler('zfs_uploader.log', maxBytes=5*1024*1024,
+                             backupCount=5)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     ch = logging.StreamHandler(sys.stdout)
