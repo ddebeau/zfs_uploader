@@ -3,6 +3,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import sys
 
+from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.schedulers.background import BlockingScheduler
 
 from zfs_uploader import __version__
@@ -39,7 +40,9 @@ def main():
     logger.addHandler(ch)
 
     config = Config()
-    scheduler = BlockingScheduler()
+    scheduler = BlockingScheduler(
+        exectors={'default': ThreadPoolExecutor(max_workers=1)}
+    )
 
     for job in config.jobs.values():
         logger.info(f'Adding job {job.filesystem}')
