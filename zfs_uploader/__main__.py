@@ -43,7 +43,9 @@ def main():
 
     for job in config.jobs.values():
         logger.info(f'Adding job {job.filesystem}')
-        scheduler.add_job(job.start, 'cron', **job.cron)
+        scheduler.add_job(job.start, 'cron', **job.cron,
+                          misfire_grace_time=2*60*60,
+                          coalesce=True)
 
     try:
         scheduler.start()
