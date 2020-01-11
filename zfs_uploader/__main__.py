@@ -41,7 +41,7 @@ def main():
 
     config = Config()
     scheduler = BlockingScheduler(
-        exectors={'default': ThreadPoolExecutor(max_workers=1)}
+        executors={'default': ThreadPoolExecutor(max_workers=1)}
     )
 
     for job in config.jobs.values():
