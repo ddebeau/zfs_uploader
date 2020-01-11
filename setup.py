@@ -1,14 +1,16 @@
 from setuptools import setup
 
+from zfs_uploader import __version__
+
 setup(
     name='zfs_uploader',
-    version='0.1.0',
+    version=__version__,
     packages=['zfs_uploader'],
     url='',
     license='MIT',
     author='David Debeau',
     author_email='ddebeau@gmail.com',
-    description='ZFS snapshot to blob storage uploader. ',
+    description='ZFS snapshot to blob storage uploader.',
     entry_points={
         'console_scripts': [
             'zfs_uploader = zfs_uploader.__main__:main',
