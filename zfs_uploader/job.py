@@ -251,7 +251,8 @@ class ZFSjob:
 
     def _limit_snapshots(self):
         backup_info = self._read_backup_info()
-        snapshot_keys = list(list_snapshots().keys())
+        snapshot_keys = [key for key in list_snapshots().keys() if
+                         self._filesystem in key]
 
         if len(snapshot_keys) > self._max_snapshots:
             self._logger.info(f'[{self._filesystem}] Snapshot limit achieved.')
