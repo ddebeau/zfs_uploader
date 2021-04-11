@@ -9,12 +9,14 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
-    - name: Install and provision ZFS
+    - name: Install ZFS
       run: |
         sudo apt-get update
         sudo apt-get install -y zfsutils-linux
+    - name: Create zpool
+      run: |
         truncate --size 1G disk-image
-        sudo zpool create test-pool disk-image
+        sudo zpool create test-pool ./disk-image
     - name: Install Python 3.9
       uses: actions/setup-python@v2
       with:
