@@ -4,8 +4,8 @@ import os
 config = configparser.ConfigParser()
 
 config['DEFAULT'] = {
-    'bucket': 'z3-test',
-    'region': 'us-east-2',
+    'bucket': os.environ['S3_BUCKET'],
+    'region': os.environ['AWS_DEFAULT_REGION'],
     'access_key': os.environ['AWS_ACCESS_KEY_ID'],
     'secret_key': os.environ['AWS_SECRET_ACCESS_KEY'],
     'storage_class': 'STANDARD'
