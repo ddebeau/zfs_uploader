@@ -28,7 +28,7 @@ class Config:
         default = self._cfg['DEFAULT']
         self._jobs = {}
         for k, v in self._cfg.items():
-            if k is not 'DEFAULT':
+            if k != 'DEFAULT':
                 cron_dict = None
                 cron = v.get('cron') or default.get('cron')
                 if cron:
