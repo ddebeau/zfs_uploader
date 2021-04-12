@@ -18,7 +18,7 @@ jobs:
       run: |
         truncate --size 1G disk-image
         sudo zpool create test-pool \
-        /home/runner/work/zfs_uploader/fs_uploader/disk-image
+        /home/runner/work/zfs_uploader/zfs_uploader/disk-image
     - name: Install Python 3.9
       uses: actions/setup-python@v2
       with:
