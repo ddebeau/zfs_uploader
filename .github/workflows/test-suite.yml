@@ -32,4 +32,4 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       run: |
         python write_test_config.py
-        python -m unittest
+        sudo python -m unittest
