@@ -5,7 +5,8 @@ on:
   pull_request:
     branches: [ master ]
 jobs:
-  build:
+  test:
+    environment: test
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
@@ -27,4 +28,5 @@ jobs:
         pip install -r requirements.txt
     - name: Run test suite
       run: |
+        python write_test_config.py
         python -m unittest
