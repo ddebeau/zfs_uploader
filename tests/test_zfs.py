@@ -11,7 +11,7 @@ from zfs_uploader.zfs import (create_filesystem, create_snapshot,
 class ZFSTests(unittest.TestCase):
     def setUp(self):
         # Given
-        config = Config('../config.cfg')
+        config = Config('config.cfg')
         job = next(iter(config.jobs.values()))
         self.filesystem = job.filesystem
         self.snapshot_name = 'snap_1'

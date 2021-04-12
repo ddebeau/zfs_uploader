@@ -11,7 +11,7 @@ class JobTests(unittest.TestCase):
         warnings.filterwarnings("ignore", category=ResourceWarning,
                                 message="unclosed.*<ssl.SSLSocket.*>")
 
-        config = Config('../config.cfg')
+        config = Config('config.cfg')
         self.job = next(iter(config.jobs.values()))
         self.bucket = self.job.bucket
         self.test_file = f'/{self.job.filesystem}/test_file'

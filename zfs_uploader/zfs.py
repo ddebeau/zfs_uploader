@@ -54,11 +54,11 @@ def destroy_filesystem(filesystem):
 
 def open_snapshot_stream(filesystem, snapshot_name, mode):
     """ Open snapshot stream. """
-    if mode is 'r':
+    if mode == 'r':
         cmd = ['zfs', 'send', f'{filesystem}@{snapshot_name}']
         return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
-    elif mode is 'w':
+    elif mode == 'w':
         cmd = ['zfs', 'receive', f'{filesystem}@{snapshot_name}']
         return subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,

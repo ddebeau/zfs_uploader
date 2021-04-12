@@ -1,0 +1,38 @@
+name: test-suite
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  test:
+    environment: test
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install ZFS
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y zfsutils-linux
+    - name: Create zpool
+      run: |
+        truncate --size 1G disk-image
+        sudo zpool create test-pool \
+        /home/runner/work/zfs_uploader/zfs_uploader/disk-image
+    - name: Install Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+    - name: Install dependencies
+      run: |
+        sudo python -m pip install --upgrade pip
+        sudo pip install -r requirements.txt
+    - name: Run test suite
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-2
+        S3_BUCKET: z3-test
+      run: |
+        python write_test_config.py
+        sudo python -m unittest -v
