@@ -140,7 +140,6 @@ class ZFSTests(unittest.TestCase):
             out = f.read()
         self.assertEqual(self.test_data + 'append', out)
 
-
     def test_destroy_filesystem(self):
         """ Destroy filesystem. """
         out = destroy_filesystem(self.filesystem)
