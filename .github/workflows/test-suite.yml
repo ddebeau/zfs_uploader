@@ -10,15 +10,6 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
-    - name: Install ZFS
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y zfsutils-linux
-    - name: Create zpool
-      run: |
-        truncate --size 1G disk-image
-        sudo zpool create test-pool \
-        /home/runner/work/zfs_uploader/zfs_uploader/disk-image
     - name: Install Python 3.9
       uses: actions/setup-python@v2
       with:
@@ -31,6 +22,15 @@ jobs:
     - name: Install dependencies
       run: |
         sudo pip install -r requirements.txt
+    - name: Install ZFS
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y zfsutils-linux
+    - name: Create zpool
+      run: |
+        truncate --size 1G disk-image
+        sudo zpool create test-pool \
+        /home/runner/work/zfs_uploader/zfs_uploader/disk-image
     - name: Run test suite
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
