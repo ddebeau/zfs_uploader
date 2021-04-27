@@ -20,32 +20,32 @@ class BackupDB:
         self._s3_object = bucket.Object(
             f'{self._file_system}/{BACKUP_DB_FILE}')
 
-        # initialize from backup.info file if it exists
+        # initialize from backup.db file if it exists
         self.download()
 
-    def create_backup(self, backup_time, backup_type, key):
+    def create_backup(self, backup_time, backup_type, s3_key):
         if backup_time in self._backups:
-            raise ValueError('Backup key already exists.')
+            raise ValueError('Backup already exists.')
 
         self._backups.update({
             backup_time: Backup(backup_time, backup_type, self._file_system,
-                                key)
+                                s3_key)
         })
 
         self.upload()
 
-    def delete_backup(self, key):
-        del self._backups[key]
+    def delete_backup(self, backup_time):
+        del self._backups[backup_time]
 
         self.upload()
 
-    def get_backup(self, key):
+    def get_backup(self, backup_time):
         try:
-            return self._backups[key]
+            return self._backups[backup_time]
         except KeyError:
-            raise KeyError('Backup key does not exist.') from None
+            raise KeyError('Backup does not exist.') from None
 
-    def get_sorted_keys(self, reverse=False):
+    def get_sorted_backup_times(self, reverse=False):
         return sorted(self._backups, reverse=reverse)
 
     def download(self):
