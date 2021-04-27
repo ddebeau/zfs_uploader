@@ -19,7 +19,7 @@ class BackupDBTests(unittest.TestCase):
         for item in self.bucket.objects.all():
             item.delete()
 
-    def test_create_backup(self):
+    def test_create_backup_db(self):
         # Given
         backup_db = BackupDB(self.bucket, self.file_system)
         backup_time = '20210425_201838'
@@ -37,7 +37,7 @@ class BackupDBTests(unittest.TestCase):
             backup_db_new.get_backup(backup_time)
         )
 
-    def test_delete_backup(self):
+    def test_delete_backup_db(self):
         # Given
         backup_db = BackupDB(self.bucket, self.file_system)
         backup_time = '20210425_201838'
