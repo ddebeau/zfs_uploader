@@ -23,10 +23,9 @@ class BackupDB:
         # initialize from backup.info file if it exists
         self.download()
 
-
     def create_backup(self, backup_time, backup_type, key):
         if backup_time in self._backups:
-            raise ValueError('Backup key already exists in dict.')
+            raise ValueError('Backup key already exists.')
 
         self._backups.update({
             backup_time: Backup(backup_time, backup_type, self._file_system,
@@ -44,7 +43,10 @@ class BackupDB:
         try:
             return self._backups[key]
         except KeyError:
-            raise KeyError('Backup does not exist in dict.') from None
+            raise KeyError('Backup key does not exist.') from None
+
+    def get_sorted_keys(self, reverse=False):
+        return sorted(self._backups, reverse=reverse)
 
     def download(self):
         try:
