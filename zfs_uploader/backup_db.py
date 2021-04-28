@@ -1,9 +1,10 @@
+from datetime import datetime
 from io import BytesIO
 import json
 
 from botocore.exceptions import ClientError
 
-BACKUP_DB_FILE = 'backup.db'
+from zfs_uploader import BACKUP_DB_FILE, DATETIME_FORMAT
 
 
 class BackupDB:
@@ -35,11 +36,17 @@ class BackupDB:
         self.upload()
 
     def delete_backup(self, backup_time):
+        if _validate_backup_time(backup_time) is False:
+            raise ValueError('backup_time is wrong format')
+
         del self._backups[backup_time]
 
         self.upload()
 
     def get_backup(self, backup_time):
+        if _validate_backup_time(backup_time) is False:
+            raise ValueError('backup_time is wrong format')
+
         try:
             return self._backups[backup_time]
         except KeyError:
@@ -89,8 +96,16 @@ class Backup:
         return self._s3_key
 
     def __init__(self, backup_time, backup_type, file_system, s3_key):
-        self._backup_time = backup_time
-        self._backup_type = backup_type
+        if _validate_backup_time(backup_time):
+            self._backup_time = backup_time
+        else:
+            raise ValueError('backup_time is wrong format')
+
+        if backup_type in ['full', 'inc']:
+            self._backup_type = backup_type
+        else:
+            raise ValueError('backup_type must be `full` or `inc`')
+
         self._file_system = file_system
         self._s3_key = s3_key
 
@@ -129,3 +144,12 @@ def _json_object_hook(dct):
         return Backup(**dct_copy)
     else:
         return dct
+
+
+def _validate_backup_time(backup_time):
+    try:
+        datetime.strptime(backup_time, DATETIME_FORMAT)
+    except ValueError:
+        return False
+
+    return True

@@ -8,11 +8,10 @@ from botocore.exceptions import ClientError
 import boto3
 from boto3.s3.transfer import TransferConfig
 
+from zfs_uploader import DATETIME_FORMAT
 from zfs_uploader.zfs import (create_snapshot, destroy_snapshot,
                               list_snapshots, open_snapshot_stream,
                               open_snapshot_stream_inc, ZFSError)
-
-DATETIME_FORMAT = '%Y%m%d_%H%M%S'
 
 
 class BackupError(Exception):
