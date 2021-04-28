@@ -25,6 +25,7 @@ class BackupDB:
         self.download()
 
     def create_backup(self, backup_time, backup_type, s3_key):
+        """ Create backup and upload `backup.db`. """
         if backup_time in self._backups:
             raise ValueError('Backup already exists.')
 
@@ -36,6 +37,7 @@ class BackupDB:
         self.upload()
 
     def delete_backup(self, backup_time):
+        """ Delete backup and upload `backup.db`. """
         if _validate_backup_time(backup_time) is False:
             raise ValueError('backup_time is wrong format')
 
@@ -44,6 +46,7 @@ class BackupDB:
         self.upload()
 
     def get_backup(self, backup_time):
+        """ Get backup using backup time. """
         if _validate_backup_time(backup_time) is False:
             raise ValueError('backup_time is wrong format')
 
@@ -53,9 +56,11 @@ class BackupDB:
             raise KeyError('Backup does not exist.') from None
 
     def get_sorted_backup_times(self, reverse=False):
+        """ Get list of sorted backup times. """
         return sorted(self._backups, reverse=reverse)
 
     def download(self):
+        """ Download backup.db file. """
         try:
             with BytesIO() as f:
                 self._s3_object.download_fileobj(f)
@@ -65,6 +70,7 @@ class BackupDB:
             pass
 
     def upload(self):
+        """ Upload backup.db file. """
         with BytesIO() as f:
             json_str = json.dumps(self._backups, default=_json_default)
             f.write(json_str.encode('utf-8'))

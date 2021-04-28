@@ -20,6 +20,7 @@ class BackupDBTests(unittest.TestCase):
             item.delete()
 
     def test_create_backup_db(self):
+        """ Test if backup.db file is properly uploaded/downloaded. """
         # Given
         backup_db = BackupDB(self.bucket, self.file_system)
         backup_time = '20210425_201838'
@@ -37,7 +38,8 @@ class BackupDBTests(unittest.TestCase):
             backup_db_new.get_backup(backup_time)
         )
 
-    def test_delete_backup_db(self):
+    def test_delete_backup(self):
+        """ Test delete backup from backup_db. """
         # Given
         backup_db = BackupDB(self.bucket, self.file_system)
         backup_time = '20210425_201838'
@@ -69,6 +71,7 @@ class BackupDBTests(unittest.TestCase):
                           backup_type, s3_key)
 
     def test_bad_backup_time(self):
+        """ Test create backup with bad backup_time. """
         # Given
         backup_db = BackupDB(self.bucket, self.file_system)
         backup_time = '20210425-201838'
@@ -80,6 +83,7 @@ class BackupDBTests(unittest.TestCase):
                           backup_type, s3_key)
 
     def test_bad_backup_type(self):
+        """ Test create backup with bad backup type. """
         # Given
         backup_db = BackupDB(self.bucket, self.file_system)
         backup_time = '20210425_201838'
