@@ -53,6 +53,21 @@ class BackupDBTests(unittest.TestCase):
         # Then
         self.assertRaises(KeyError, backup_db.get_backup, backup_time)
 
+    def test_existing_backup(self):
+        """ Test create existing backup. """
+        # Given
+        backup_db = BackupDB(self.bucket, self.file_system)
+        backup_time = '20210425_201838'
+        backup_type = 'full'
+        s3_key = f'{self.file_system}/{backup_time}.{backup_type}'
+
+        # When
+        backup_db.create_backup(backup_time, backup_type, s3_key)
+
+        # Then
+        self.assertRaises(ValueError, backup_db.create_backup, backup_time,
+                          backup_type, s3_key)
+
     def test_bad_backup_time(self):
         # Given
         backup_db = BackupDB(self.bucket, self.file_system)
