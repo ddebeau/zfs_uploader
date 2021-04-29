@@ -117,7 +117,7 @@ class JobTests(unittest.TestCase):
 
         # When
         self.job._max_incremental_backups = 2
-        self.job._limit_backups()
+        self.job._limit_incremental_backups()
 
         # Then
         # The two most recent incremental backups should exist.
