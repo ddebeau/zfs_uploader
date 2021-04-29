@@ -24,14 +24,18 @@ class BackupDB:
         # initialize from backup.db file if it exists
         self.download()
 
-    def create_backup(self, backup_time, backup_type, s3_key):
+    def create_backup(self, backup_time, backup_type, s3_key,
+                      dependency=None):
         """ Create backup and upload `backup.db`. """
         if backup_time in self._backups:
             raise ValueError('Backup already exists.')
 
+        if dependency not in self._backups:
+            raise ValueError('Depending on backup does not exist.')
+
         self._backups.update({
             backup_time: Backup(backup_time, backup_type, self._file_system,
-                                s3_key)
+                                s3_key, dependency)
         })
 
         self.upload()
@@ -101,7 +105,13 @@ class Backup:
         """ S3 key. """
         return self._s3_key
 
-    def __init__(self, backup_time, backup_type, file_system, s3_key):
+    @property
+    def dependency(self):
+        """ Backup time of dependency. """
+        return self._dependency
+
+    def __init__(self, backup_time, backup_type, file_system, s3_key,
+                 dependency=None):
         if _validate_backup_time(backup_time):
             self._backup_time = backup_time
         else:
@@ -115,18 +125,25 @@ class Backup:
         self._file_system = file_system
         self._s3_key = s3_key
 
+        if dependency and _validate_backup_time(dependency):
+            self._dependency = dependency
+        else:
+            raise ValueError('dependency is wrong format')
+
     def __eq__(self, other):
         return all((self._backup_time == other._backup_time,
                     self._backup_type == other._backup_type,
                     self._file_system == other._file_system,
-                    self._s3_key == other._s3_key
+                    self._s3_key == other._s3_key,
+                    self._dependency == other._dependency
                     ))
 
     def __hash__(self):
         return hash((self._backup_time,
                      self._backup_type,
                      self._file_system,
-                     self._s3_key
+                     self._s3_key,
+                     self._dependency
                      ))
 
 
@@ -138,6 +155,7 @@ def _json_default(obj):
             'backup_type': obj._backup_type,
             'file_system': obj._file_system,
             's3_key': obj._s3_key,
+            'dependency': obj._dependency
         }
 
 
