@@ -59,9 +59,33 @@ class BackupDB:
         except KeyError:
             raise KeyError('Backup does not exist.') from None
 
-    def get_sorted_backup_times(self, reverse=False):
-        """ Get list of sorted backup times. """
-        return sorted(self._backups, reverse=reverse)
+    def get_backups(self, backup_type=None):
+        """ Get sorted list of backups.
+
+        Most recent backup is last.
+        """
+        backup_times = sorted(self._backups)
+
+        if backup_type in ['full', 'inc']:
+            backups = []
+            for time in backup_times:
+                backup = self._backups[time]
+
+                if backup.backup_type == backup_type:
+                    backups.append(backup)
+        elif backup_type is None:
+            backups = [self._backups[time] for time in backup_times]
+        else:
+            raise ValueError('backup_type must be `full` or `inc`')
+
+        return backups
+
+    def get_backup_times(self):
+        """ Get sorted list of backup times.
+
+        Most recent backup time is last.
+        """
+        return sorted(self._backups)
 
     def download(self):
         """ Download backup.db file. """

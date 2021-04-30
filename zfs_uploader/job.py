@@ -96,15 +96,8 @@ class ZFSjob:
         self._logger.info(f'[{self._file_system}] Starting job.')
 
         # find most recent full backup
-        backup_full = None
-        backup_times = self._backup_db.get_sorted_backup_times(reverse=True)
-
-        for time in backup_times:
-            backup = self._backup_db.get_backup(time)
-
-            if backup.backup_type == 'full':
-                backup_full = backup
-                break
+        result = self._backup_db.get_backups(backup_type='full')
+        backup_full = result[-1] if result else None
 
         # run incremental backup if full backup exists
         if backup_full:
@@ -121,10 +114,10 @@ class ZFSjob:
 
     def restore(self):
         """ Restore from most recent backup. """
-        result = self._backup_db.get_sorted_backup_times(reverse=True)
+        result = self._backup_db.get_backups()
 
         if result:
-            backup = self._backup_db.get_backup(result[0])
+            backup = result[-1]
             backup_type = backup.backup_type
 
             if backup_type == 'full':
@@ -214,7 +207,7 @@ class ZFSjob:
         return backup_time
 
     def _limit_snapshots(self):
-        backup_times = self._backup_db.get_sorted_backup_times()
+        backup_times = self._backup_db.get_backup_times()
         snapshot_keys = [key for key in list_snapshots().keys() if
                          self._file_system in key]
 
@@ -247,23 +240,15 @@ class ZFSjob:
         self._backup_db.delete_backup(backup_time)
 
     def _limit_incremental_backups(self):
-        result = self._backup_db.get_sorted_backup_times(reverse=True)
+        backups_inc = self._backup_db.get_backups(backup_type='inc')
 
-        if result:
-            backups_inc = []
-            for backup_time in result:
-                backup = self._backup_db.get_backup(backup_time)
-
-                if backup.backup_type == 'inc':
-                    backups_inc.append(backup)
-
-
+        if backups_inc:
             if len(backups_inc) > self._max_incremental_backups:
                 self._logger.info(f'[{self._file_system}] Incremental backup '
                                   f'limit achieved.')
 
             while len(backups_inc) > self._max_incremental_backups:
-                backup = backups_inc.pop(-1)
+                backup = backups_inc.pop(0)
                 self._delete_backup(backup)
 
 
