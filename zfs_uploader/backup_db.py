@@ -30,7 +30,7 @@ class BackupDB:
         if backup_time in self._backups:
             raise ValueError('Backup already exists.')
 
-        if dependency not in self._backups:
+        if dependency and dependency not in self._backups:
             raise ValueError('Depending on backup does not exist.')
 
         self._backups.update({
@@ -80,12 +80,23 @@ class BackupDB:
 
         return backups
 
-    def get_backup_times(self):
+    def get_backup_times(self, backup_type=None):
         """ Get sorted list of backup times.
 
         Most recent backup time is last.
         """
-        return sorted(self._backups)
+        if backup_type in ['full', 'inc']:
+            backup_times = []
+            for time in sorted(self._backups):
+                backup = self._backups[time]
+
+                if backup.backup_type == backup_type:
+                    backup_times.append(time)
+            return backup_times
+        elif backup_type is None:
+            return sorted(self._backups)
+        else:
+            raise ValueError('backup_type must be `full` or `inc`')
 
     def download(self):
         """ Download backup.db file. """
@@ -149,10 +160,10 @@ class Backup:
         self._file_system = file_system
         self._s3_key = s3_key
 
-        if dependency and _validate_backup_time(dependency):
-            self._dependency = dependency
-        else:
-            raise ValueError('dependency is wrong format')
+        if dependency:
+            if not _validate_backup_time(dependency):
+                raise ValueError('dependency is wrong format')
+        self._dependency = dependency
 
     def __eq__(self, other):
         return all((self._backup_time == other._backup_time,

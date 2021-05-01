@@ -21,7 +21,7 @@ class ZFSjob:
     @property
     def bucket(self):
         """ S3 bucket. """
-        return self.bucket
+        return self._bucket
 
     @property
     def region(self):
@@ -125,8 +125,8 @@ class ZFSjob:
 
             elif backup_type == 'inc':
                 # restore full backup first
-                backup_time_full = backup.dependency.backup_time
-                self._restore_snapshot(backup_time_full)
+                backup_full = self._backup_db.get_backup(backup.dependency)
+                self._restore_snapshot(backup_full)
                 self._restore_snapshot(backup)
         else:
             print(f'No {BACKUP_DB_FILE} file exists.')
@@ -172,7 +172,8 @@ class ZFSjob:
         self._check_backup(s3_key)
         self._backup_db.create_backup(backup_time, 'inc', s3_key,
                                       backup_time_full)
-        self._logger.info(f'[{self._file_system}] Finished incremental backup.')
+        self._logger.info(f'[{self._file_system}] '
+                          'Finished incremental backup.')
 
     def _restore_snapshot(self, backup):
         backup_time = backup.backup_time
@@ -207,19 +208,26 @@ class ZFSjob:
         return backup_time
 
     def _limit_snapshots(self):
-        backup_times = self._backup_db.get_backup_times()
+        """ Limit number of snapshots.
+
+        We only remove snapshots that were used for incremental backups.
+        Keeping snapshots that were used for full backups allow us to
+        restore without having to download the full backup.
+        """
+        backup_times_full = self._backup_db.get_backup_times('full')
         snapshot_keys = [key for key in list_snapshots().keys() if
                          self._file_system in key]
 
         if len(snapshot_keys) > self._max_snapshots:
-            self._logger.info(f'[{self._file_system}] Snapshot limit achieved.')
+            self._logger.info(f'[{self._file_system}] '
+                              'Snapshot limit achieved.')
 
         while len(snapshot_keys) > self._max_snapshots:
             snapshot = snapshot_keys.pop(0)
             filesystem = snapshot.split('@')[0]
             backup_time = snapshot.split('@')[1]
 
-            if backup_time not in backup_times:
+            if backup_time not in backup_times_full:
                 self._logger.info(f'[{snapshot}] Deleting snapshot.')
                 destroy_snapshot(filesystem, backup_time)
 
