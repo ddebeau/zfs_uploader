@@ -1,12 +1,12 @@
-from datetime import datetime
 import logging
 from time import sleep
 
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-from zfs_uploader import BACKUP_DB_FILE, DATETIME_FORMAT
+from zfs_uploader import BACKUP_DB_FILE
 from zfs_uploader.backup_db import BackupDB
+from zfs_uploader.utils import get_date_time
 from zfs_uploader.zfs import (create_snapshot, destroy_snapshot,
                               list_snapshots, open_snapshot_stream,
                               open_snapshot_stream_inc, ZFSError)
@@ -191,13 +191,13 @@ class ZFSjob:
             raise ZFSError(stderr)
 
     def _create_snapshot(self):
-        backup_time = _get_date_time()
+        backup_time = get_date_time()
         snapshot_name = f'{self._file_system}@{backup_time}'
 
         if snapshot_name in list_snapshots():
             # sleep for one second in order to increment snapshot_time
             sleep(1)
-            backup_time = _get_date_time()
+            backup_time = get_date_time()
             snapshot_name = f'{self._file_system}@{backup_time}'
 
         self._logger.info(f'[{snapshot_name}] Creating snapshot.')
@@ -258,7 +258,3 @@ class ZFSjob:
             while len(backups_inc) > self._max_incremental_backups:
                 backup = backups_inc.pop(0)
                 self._delete_backup(backup)
-
-
-def _get_date_time():
-    return datetime.now().strftime(DATETIME_FORMAT)
