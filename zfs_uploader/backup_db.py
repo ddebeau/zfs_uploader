@@ -136,6 +136,11 @@ class Backup:
         return self._file_system
 
     @property
+    def snapshot_name(self):
+        """ ZFS snapshot name. """
+        return f'{self._file_system}@{self._backup_time}'
+
+    @property
     def s3_key(self):
         """ S3 key. """
         return self._s3_key
