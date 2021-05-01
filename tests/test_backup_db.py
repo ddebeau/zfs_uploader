@@ -93,3 +93,17 @@ class BackupDBTests(unittest.TestCase):
         # Then
         self.assertRaises(ValueError, backup_db.create_backup, backup_time,
                           backup_type, s3_key)
+
+    def test_bad_dependency(self):
+        """ Test creating a backup with a bad dependency. """
+
+        # Given
+        backup_db = BackupDB(self.bucket, self.file_system)
+        backup_time = '20210425_201838'
+        backup_type = 'full'
+        s3_key = f'{self.file_system}/{backup_time}.{backup_type}'
+        dependency = '20200425-201838'
+
+        # Then
+        self.assertRaises(ValueError, backup_db.create_backup, backup_time,
+                          backup_type, s3_key, dependency)
