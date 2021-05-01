@@ -17,6 +17,7 @@ class SnapshotDB:
         self.refresh()
 
     def create_snapshot(self):
+        """ Create snapshot. """
         name = get_date_time()
 
         if name in self._snapshots:
@@ -33,6 +34,7 @@ class SnapshotDB:
         return self._snapshots[name]
 
     def delete_snapshot(self, name):
+        """ Delete snapshot. """
         zfs.destroy_snapshot(self._file_system, name)
 
         del self._snapshots[name]
