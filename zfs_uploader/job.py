@@ -1,14 +1,12 @@
 import logging
-from time import sleep
 
 import boto3
 from boto3.s3.transfer import TransferConfig
 
 from zfs_uploader import BACKUP_DB_FILE
 from zfs_uploader.backup_db import BackupDB
-from zfs_uploader.utils import get_date_time
-from zfs_uploader.zfs import (create_snapshot, destroy_snapshot,
-                              list_snapshots, open_snapshot_stream,
+from zfs_uploader.snapshot_db import SnapshotDB
+from zfs_uploader.zfs import (open_snapshot_stream,
                               open_snapshot_stream_inc, ZFSError)
 
 
@@ -85,6 +83,7 @@ class ZFSjob:
         self._s3_transfer_config = TransferConfig(max_concurrency=20)
         self._bucket = self._s3.Bucket(self._bucket_name)
         self._backup_db = BackupDB(self._bucket, self._file_system)
+        self._snapshot_db = SnapshotDB(self._file_system)
         self._cron = cron
         self._max_snapshots = max_snapshots
         self._max_incremental_backups = max_incremental_backups
@@ -132,7 +131,9 @@ class ZFSjob:
             print(f'No {BACKUP_DB_FILE} file exists.')
 
     def _backup_full(self):
-        backup_time = self._create_snapshot()
+        snapshot = self._snapshot_db.create_snapshot()
+        backup_time = snapshot.name
+
         s3_key = f'{self._file_system}/{backup_time}.full'
         self._logger.info(f'[{s3_key}] Starting full backup.')
 
@@ -152,7 +153,9 @@ class ZFSjob:
         self._logger.info(f'[{self._file_system}] Finished full backup.')
 
     def _backup_incremental(self, backup_time_full):
-        backup_time = self._create_snapshot()
+        snapshot = self._snapshot_db.create_snapshot()
+        backup_time = snapshot.name
+
         s3_key = f'{self._file_system}/{backup_time}.inc'
         self._logger.info(f'[{s3_key}] Starting incremental backup.')
 
@@ -190,22 +193,7 @@ class ZFSjob:
         if f.returncode:
             raise ZFSError(stderr)
 
-    def _create_snapshot(self):
-        backup_time = get_date_time()
-        snapshot_name = f'{self._file_system}@{backup_time}'
-
-        if snapshot_name in list_snapshots():
-            # sleep for one second in order to increment snapshot_time
-            sleep(1)
-            backup_time = get_date_time()
-            snapshot_name = f'{self._file_system}@{backup_time}'
-
-        self._logger.info(f'[{snapshot_name}] Creating snapshot.')
-        out = create_snapshot(self._file_system, backup_time)
-        if out.returncode:
-            raise ZFSError(out.stderr)
-
-        return backup_time
+        self._snapshot_db.refresh()
 
     def _limit_snapshots(self):
         """ Limit number of snapshots.
@@ -215,21 +203,19 @@ class ZFSjob:
         restore without having to download the full backup.
         """
         backup_times_full = self._backup_db.get_backup_times('full')
-        snapshot_keys = [key for key in list_snapshots().keys() if
-                         self._file_system in key]
+        results = self._snapshot_db.get_snapshots()
 
-        if len(snapshot_keys) > self._max_snapshots:
+        if len(results) > self._max_snapshots:
             self._logger.info(f'[{self._file_system}] '
                               'Snapshot limit achieved.')
 
-        while len(snapshot_keys) > self._max_snapshots:
-            snapshot = snapshot_keys.pop(0)
-            filesystem = snapshot.split('@')[0]
-            backup_time = snapshot.split('@')[1]
+        while len(results) > self._max_snapshots:
+            snapshot = results.pop(0)
+            backup_time = snapshot.name
 
             if backup_time not in backup_times_full:
-                self._logger.info(f'[{snapshot}] Deleting snapshot.')
-                destroy_snapshot(filesystem, backup_time)
+                self._logger.info(f'[{snapshot.key}] Deleting snapshot.')
+                self._snapshot_db.delete_snapshot(snapshot.name)
 
     def _check_backup(self, key):
         # load() will fail if object does not exist

@@ -12,18 +12,9 @@ class SnapshotDB:
 
     def __init__(self, file_system):
         self._file_system = file_system
-
         self._snapshots = {}
 
-        for k, v in zfs.list_snapshots().items():
-            if self._file_system in k:
-                file_system, name = k.split('@')
-                referenced = v['REFER']
-                used = v['USED']
-
-                self._snapshots.update({
-                    name: Snapshot(file_system, name, referenced, used)
-                })
+        self.refresh()
 
     def create_snapshot(self):
         name = get_date_time()
@@ -37,16 +28,9 @@ class SnapshotDB:
         if out.returncode:
             raise zfs.ZFSError(out.stderr)
 
-        key = f'{self._file_system}@{name}'
-        v = zfs.list_snapshots()[key]
-        referenced = v['REFER']
-        used = v['USED']
+        self.refresh()
 
-        snapshot = Snapshot(self._file_system, name, referenced, used)
-        self._snapshots.update({
-            name: snapshot
-        })
-        return snapshot
+        return self._snapshots[name]
 
     def delete_snapshot(self, name):
         zfs.destroy_snapshot(self._file_system, name)
@@ -66,6 +50,19 @@ class SnapshotDB:
         Most recent snapshot name is last.
         """
         return list(self._snapshots.keys())
+
+    def refresh(self):
+        """ Refresh SnapshotDB with latest snapshots. """
+        self._snapshots = {}
+        for k, v in zfs.list_snapshots().items():
+            if self._file_system in k:
+                file_system, name = k.split('@')
+                referenced = v['REFER']
+                used = v['USED']
+
+                self._snapshots.update({
+                    name: Snapshot(file_system, name, referenced, used)
+                })
 
 
 class Snapshot:

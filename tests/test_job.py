@@ -2,8 +2,7 @@ import unittest
 import warnings
 
 from zfs_uploader.config import Config
-from zfs_uploader.zfs import (create_filesystem, destroy_filesystem,
-                              list_snapshots)
+from zfs_uploader.zfs import create_filesystem, destroy_filesystem
 
 
 class JobTests(unittest.TestCase):
@@ -88,20 +87,20 @@ class JobTests(unittest.TestCase):
         for _ in range(4):
             self.job.start()
 
-        snapshot_keys = list(list_snapshots().keys())
-        self.assertEqual(4, len(snapshot_keys))
+        snapshots = self.job._snapshot_db.get_snapshots()
+        self.assertEqual(4, len(snapshots))
 
         # When
         self.job._max_snapshots = 2
         self.job._limit_snapshots()
 
         # Then
-        out = list(list_snapshots().keys())
-        self.assertEqual(3, len(out))
+        snapshots_new = self.job._snapshot_db.get_snapshots()
+        self.assertEqual(3, len(snapshots_new))
         # Check if two most recent snapshots exist.
-        self.assertListEqual(snapshot_keys[-2:], out[-2:])
+        self.assertListEqual(snapshots[-2:], snapshots_new[-2:])
         # Check if full backup snapshot exists.
-        self.assertEqual(snapshot_keys[0], out[0])
+        self.assertEqual(snapshots[0], snapshots_new[0])
 
     def test_limit_backups(self):
         """ Test the incremental backup limiter. """
