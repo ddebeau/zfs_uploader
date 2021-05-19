@@ -14,6 +14,10 @@ class BackupError(Exception):
     """ Baseclass for backup exceptions. """
 
 
+class RestoreError(Exception):
+    """ Baseclass for restore exceptions. """
+
+
 class ZFSjob:
     """ ZFS backup job. """
     @property
@@ -111,24 +115,47 @@ class ZFSjob:
 
         self._logger.info(f'[{self._file_system}] Finished job.')
 
-    def restore(self):
-        """ Restore from most recent backup. """
-        result = self._backup_db.get_backups()
+    def restore(self, backup_time=None):
+        """ Restore from most backup.
 
-        if result:
-            backup = result[-1]
-            backup_type = backup.backup_type
+        Defaults to most recent backup if backup_time is not specified.
+        """
+        self._snapshot_db.refresh()
+        snapshots = self._snapshot_db.get_snapshot_names()
 
-            if backup_type == 'full':
-                self._restore_snapshot(backup)
-
-            elif backup_type == 'inc':
-                # restore full backup first
-                backup_full = self._backup_db.get_backup(backup.dependency)
-                self._restore_snapshot(backup_full)
-                self._restore_snapshot(backup)
+        if backup_time:
+            backup = self._backup_db.get_backup(backup_time)
         else:
-            print(f'No {BACKUP_DB_FILE} file exists.')
+            backups = self._backup_db.get_backups()
+            if backups is None:
+                raise RestoreError('No backups exist.')
+            else:
+                backup = backups[-1]
+
+        backup_time = backup.backup_time
+        backup_type = backup.backup_type
+        s3_key = backup.s3_key
+
+        if backup_type == 'full':
+            if backup_time in snapshots:
+                self._logger.info(f'[{s3_key}] Snapshot already exists.')
+            else:
+                self._restore_snapshot(backup)
+
+        elif backup_type == 'inc':
+            # restore full backup first
+            backup_full = self._backup_db.get_backup(backup.dependency)
+
+            if backup_full.backup_time in snapshots:
+                self._logger.info(f'[{backup_full.s3_key}] Snapshot already '
+                                  f'exists.')
+            else:
+                self._restore_snapshot(backup_full)
+
+            if backup_time in snapshots:
+                self._logger.info(f'[{s3_key}] Snapshot already exists.')
+            else:
+                self._restore_snapshot(backup)
 
     def _backup_full(self):
         snapshot = self._snapshot_db.create_snapshot()
