@@ -70,11 +70,11 @@ class ZFSjob:
         return self._storage_class
 
     def __init__(self, bucket_name, access_key, secret_key, file_system,
-                 region='us-east-1', cron=None, max_snapshots=None,
-                 max_incremental_backups=None, storage_class='STANDARD'):
+                 region=None, cron=None, max_snapshots=None,
+                 max_incremental_backups=None, storage_class=None):
         """ Construct ZFS backup job. """
         self._bucket_name = bucket_name
-        self._region = region
+        self._region = region or 'us-east-1'
         self._access_key = access_key
         self._secret_key = secret_key
         self._file_system = file_system
@@ -90,7 +90,7 @@ class ZFSjob:
         self._cron = cron
         self._max_snapshots = max_snapshots
         self._max_incremental_backups = max_incremental_backups
-        self._storage_class = storage_class
+        self._storage_class = storage_class or 'STANDARD'
         self._logger = logging.getLogger(__name__)
 
     def start(self):
