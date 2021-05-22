@@ -59,7 +59,23 @@ class JobTests(unittest.TestCase):
         self.assertEqual(1, len(backups))
         self.assertEqual(backup_type, backups[0].backup_type)
 
-    def test_restore_from_increment(self):
+    def test_restore_from_full_backup(self):
+        """ Test restore from full backup. """
+        # Given
+        self.job.start()
+
+        out = destroy_filesystem(self.job.filesystem)
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # When
+        self.job.restore()
+
+        # Then
+        with open(self.test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data, out)
+
+    def test_restore_from_incremental_backup(self):
         """ Test restore from incremental backup. """
         # Given
         self.job.start()
@@ -73,6 +89,27 @@ class JobTests(unittest.TestCase):
 
         # When
         self.job.restore()
+
+        # Then
+        with open(self.test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data + 'append', out)
+
+    def test_restore_specific_backup(self):
+        """ Test restoring from specific backup. """
+        # Given
+        self.job.start()
+
+        with open(self.test_file, 'a') as f:
+            f.write('append')
+        self.job.start()
+
+        out = destroy_filesystem(self.job.filesystem)
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # When
+        backups = self.job._backup_db.get_backup_times('inc')
+        self.job.restore(backups[0])
 
         # Then
         with open(self.test_file, 'r') as f:
