@@ -3,7 +3,6 @@ import logging
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-from zfs_uploader import BACKUP_DB_FILE
 from zfs_uploader.backup_db import BackupDB
 from zfs_uploader.snapshot_db import SnapshotDB
 from zfs_uploader.zfs import (open_snapshot_stream,
