@@ -75,7 +75,7 @@ class JobTests(unittest.TestCase):
             out = f.read()
         self.assertEqual(self.test_data, out)
 
-    def test_restore_from_increment_backup(self):
+    def test_restore_from_incremental_backup(self):
         """ Test restore from incremental backup. """
         # Given
         self.job.start()
