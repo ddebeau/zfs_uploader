@@ -11,13 +11,30 @@ class SnapshotDB:
         return self._file_system
 
     def __init__(self, file_system):
+        """ Create SnapshotDB object.
+
+        Snapshot DB is used for storing Snapshot objects. Creating a
+        snapshot will create an actual ZFS snapshot.
+
+        Parameters
+        ----------
+        file_system : str
+            ZFS filesystem.
+
+        """
         self._file_system = file_system
         self._snapshots = {}
 
         self.refresh()
 
     def create_snapshot(self):
-        """ Create snapshot. """
+        """ Create Snapshot object and ZFS snapshot.
+
+        Returns
+        -------
+        Snapshot
+
+        """
         name = get_date_time()
 
         if name in self._snapshots:
@@ -34,7 +51,13 @@ class SnapshotDB:
         return self._snapshots[name]
 
     def delete_snapshot(self, name):
-        """ Delete snapshot. """
+        """ Delete Snapshot object and ZFS snapshot.
+
+        Parameters
+        ----------
+        name : str
+
+        """
         zfs.destroy_snapshot(self._file_system, name)
 
         del self._snapshots[name]
@@ -43,6 +66,12 @@ class SnapshotDB:
         """ Get sorted list of snapshots.
 
         Most recent snapshot is last.
+
+        Returns
+        -------
+        list(Snapshot)
+            Sorted list of snapshots. Most recent snapshot is last.
+
         """
         return list(self._snapshots.values())
 
@@ -50,6 +79,12 @@ class SnapshotDB:
         """ Get sorted list of snapshot names.
 
         Most recent snapshot name is last.
+
+        Returns
+        -------
+        list(str)
+            Sorted list of snapshot names. Most recent snapshot is last.
+
         """
         return list(self._snapshots.keys())
 
@@ -96,16 +131,30 @@ class Snapshot:
         return self._used
 
     def __init__(self, file_system, name, referenced, used):
+        """ Create Snapshot object.
+
+        Parameters
+        ----------
+        file_system : str
+            ZFS filesystem.
+        name : str
+            Snapshot name.
+        referenced : str
+            Space referenced by snapshot.
+        used : str
+            Space used by snapshot.
+
+        """
         self._file_system = file_system
         self._name = name
         self._referenced = referenced
         self._used = used
 
     def __eq__(self, other):
-        return all((self._file_system == other._file_system,
-                    self._name == other._name,
-                    self._referenced == other._referenced,
-                    self._used == other._used
+        return all((self._file_system == other._file_system, # noqa
+                    self._name == other._name, # noqa
+                    self._referenced == other._referenced, # noqa
+                    self._used == other._used # noqa
                     ))
 
     def __hash__(self):

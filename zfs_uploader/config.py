@@ -14,7 +14,14 @@ class Config:
         return self._jobs
 
     def __init__(self, file_path=None):
-        """ Construct Config object from file. """
+        """ Construct Config object from file.
+
+        Parameters
+        ----------
+        file_path : str
+            File path to config file.
+
+        """
         self._logger = logging.getLogger(__name__)
         self._logger.info('Loading configuration file.')
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from io import BytesIO
 import json
 
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError # noqa
 
 from zfs_uploader import BACKUP_DB_FILE, DATETIME_FORMAT
 
@@ -16,6 +16,19 @@ class BackupDB:
         return self._file_system
 
     def __init__(self, bucket, file_system):
+        """ Create BackupDB object.
+
+        BackupDB is used for storing Backup objects. It does not upload
+        backups but serves as a database for backup records.
+
+        Parameters
+        ----------
+        bucket : Bucket
+            S3 Bucket.
+        file_system : str
+            ZFS filesystem.
+
+        """
         self._file_system = file_system
         self._backups = {}
         self._s3_object = bucket.Object(
@@ -26,7 +39,21 @@ class BackupDB:
 
     def create_backup(self, backup_time, backup_type, s3_key,
                       dependency=None):
-        """ Create backup and upload `backup.db`. """
+        """ Create backup object and upload `backup.db` file.
+
+        Parameters
+        ----------
+        backup_time : str
+            Backup time in %Y%m%d_%H%M%S format.
+        backup_type : str
+            Supported backup types are `full` and `inc`.
+        s3_key : str
+            Backup S3 key.
+        dependency : str, optional
+            Backup time of dependency in %Y%m%d_%H%M%S format. Used for
+            storing the dependent full backup for an incremental backup.
+
+        """
         if backup_time in self._backups:
             raise ValueError('Backup already exists.')
 
@@ -41,7 +68,14 @@ class BackupDB:
         self.upload()
 
     def delete_backup(self, backup_time):
-        """ Delete backup and upload `backup.db`. """
+        """ Delete backup and upload `backup.db`.
+
+        Parameters
+        ----------
+        backup_time : str
+            Backup time in %Y%m%d_%H%M%S format.
+
+        """
         if _validate_backup_time(backup_time) is False:
             raise ValueError('backup_time is wrong format')
 
@@ -50,7 +84,18 @@ class BackupDB:
         self.upload()
 
     def get_backup(self, backup_time):
-        """ Get backup using backup time. """
+        """ Get backup using backup time.
+
+        Parameters
+        ----------
+        backup_time : str
+            Backup time in %Y%m%d_%H%M%S format.
+
+        Returns
+        -------
+        Backup
+
+        """
         if _validate_backup_time(backup_time) is False:
             raise ValueError('backup_time is wrong format')
 
@@ -62,7 +107,16 @@ class BackupDB:
     def get_backups(self, backup_type=None):
         """ Get sorted list of backups.
 
-        Most recent backup is last.
+        Parameters
+        ----------
+        backup_type : str, optional
+            Supported backup types are `full` and `inc`.
+
+        Returns
+        -------
+        list(Backup)
+            Sorted list of backups. Most recent backup is last.
+
         """
         backup_times = sorted(self._backups)
 
@@ -83,7 +137,16 @@ class BackupDB:
     def get_backup_times(self, backup_type=None):
         """ Get sorted list of backup times.
 
-        Most recent backup time is last.
+        Parameters
+        ----------
+        backup_type : str, optional
+            Supported backup types are `full` and `inc`.
+
+        Returns
+        -------
+        list(str)
+            Sorted list of backup times. Most recent backup is last.
+
         """
         if backup_type in ['full', 'inc']:
             backup_times = []
@@ -152,6 +215,21 @@ class Backup:
 
     def __init__(self, backup_time, backup_type, file_system, s3_key,
                  dependency=None):
+        """ Create Backup object.
+
+        Parameters
+        ----------
+        backup_time : str
+            Backup time in %Y%m%d_%H%M%S format.
+        backup_type : str
+            Supported backup types are `full` and `inc`.
+        s3_key : str
+            Backup S3 key.
+        dependency : str, optional
+            Backup time of dependency in %Y%m%d_%H%M%S format. Used for
+            storing the dependent full backup for an incremental backup.
+
+        """
         if _validate_backup_time(backup_time):
             self._backup_time = backup_time
         else:
@@ -171,11 +249,11 @@ class Backup:
         self._dependency = dependency
 
     def __eq__(self, other):
-        return all((self._backup_time == other._backup_time,
-                    self._backup_type == other._backup_type,
-                    self._file_system == other._file_system,
-                    self._s3_key == other._s3_key,
-                    self._dependency == other._dependency
+        return all((self._backup_time == other._backup_time, # noqa
+                    self._backup_type == other._backup_type, # noqa
+                    self._file_system == other._file_system, # noqa
+                    self._s3_key == other._s3_key, # noqa
+                    self._dependency == other._dependency # noqa
                     ))
 
     def __hash__(self):
@@ -191,11 +269,11 @@ def _json_default(obj):
     if isinstance(obj, Backup):
         return {
             '_type': 'Backup',
-            'backup_time': obj._backup_time,
-            'backup_type': obj._backup_type,
-            'file_system': obj._file_system,
-            's3_key': obj._s3_key,
-            'dependency': obj._dependency
+            'backup_time': obj._backup_time, # noqa
+            'backup_type': obj._backup_type, # noqa
+            'file_system': obj._file_system, # noqa
+            's3_key': obj._s3_key, # noqa
+            'dependency': obj._dependency # noqa
         }
 
 
