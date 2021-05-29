@@ -1,3 +1,3 @@
-apscheduler
-boto3
-click
+apscheduler>=3.7.0
+boto3>=1.17.84
+click>=8.0.1
