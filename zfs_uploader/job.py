@@ -69,6 +69,11 @@ class ZFSjob:
         """ S3 storage class. """
         return self._storage_class
 
+    @property
+    def backup_db(self):
+        """ BackupDB """
+        return self._backup_db
+
     def __init__(self, bucket_name, access_key, secret_key, file_system,
                  region=None, cron=None, max_snapshots=None,
                  max_incremental_backups=None, storage_class=None):
