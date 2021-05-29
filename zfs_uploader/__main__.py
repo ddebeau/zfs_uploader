@@ -1,8 +1,8 @@
-import argparse
 import logging
 from logging.handlers import RotatingFileHandler
 import sys
 
+import click
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.schedulers.background import BlockingScheduler
 
@@ -12,34 +12,32 @@ from zfs_uploader.config import Config
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='ZFS snapshot to blob storage uploader.')
-    parser.add_argument('--log',
-                        default='zfs_uploader.log',
-                        help='Log file location. Defaults to '
-                             '\'zfs_uploader.log\'')
-    parser.add_argument('-v', '--version',
-                        action='store_true',
-                        help='Display software version.')
-    args = parser.parse_args()
+@click.group()
+def cli():
+    pass
 
-    if args.version:
-        print(__version__)
-        sys.exit(0)
 
+@cli.command()
+@click.option('--config-path', default='config.cfg',
+              help='Config file path.',
+              show_default=True)
+@click.option('--log-path', default='zfs_uploader.log',
+              help='Log file path.',
+              show_default=True)
+def backup(config_path, log_path):
+    """ Start backup job scheduler. """
     logger = logging.getLogger('zfs_uploader')
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter(LOG_FORMAT)
 
-    fh = RotatingFileHandler(args.log, maxBytes=5*1024*1024, backupCount=5)
+    fh = RotatingFileHandler(log_path, maxBytes=5*1024*1024, backupCount=5)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
-    config = Config()
+    config = Config(config_path)
     scheduler = BlockingScheduler(
         executors={'default': ThreadPoolExecutor(max_workers=1)}
     )
@@ -56,5 +54,55 @@ def main():
         pass
 
 
+@cli.command('list')
+@click.option('--config-path', default='config.cfg',
+              help='Config file path.',
+              show_default=True)
+@click.argument('filesystem')
+def list_backups(config_path, filesystem):
+    """ List backups. """
+    config = Config(config_path)
+    job = config.jobs.get(filesystem)
+
+    if job is None:
+        print('Filesystem does not exist.')
+        sys.exit(1)
+
+    print('{0:<16} {1:<16} {2:<5}'.format('time', 'dependency', 'type'))
+    print('-'*38)
+    for b in job.backup_db.get_backups():
+        dependency = b.dependency or str(b.dependency)
+        print(f'{b.backup_time:<16} {dependency:<16} {b.backup_type:<5}')
+
+
+@cli.command()
+@click.option('--config-path', default='config.cfg',
+              help='Config file path.',
+              show_default=True)
+@click.argument('filesystem')
+@click.argument('backup-time', required=False)
+def restore(config_path, filesystem, backup_time):
+    """ Restore from backup.
+
+    Defaults to most recent backup if backup_time is not specified.
+
+    """
+    config = Config(config_path)
+    job = config.jobs.get(filesystem)
+
+    if job is None:
+        print('Filesystem does not exist.')
+        sys.exit(1)
+
+    job.restore(backup_time) if backup_time else job.restore()
+
+    print('Restore successful.')
+
+
+@cli.command(help='Print version.')
+def version():
+    print(__version__)
+
+
 if __name__ == '__main__':
-    main()
+    cli()
