@@ -1,4 +1,4 @@
-name: test-suite
+name: test
 on:
   pull_request:
     branches: [ master ]
