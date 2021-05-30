@@ -1,0 +1,27 @@
+name: release
+on:
+  pull_request:
+    branches: [ master ]
+  release:
+    types: [created]
+jobs:
+  release:
+    environment: release
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+    - name: Install dependencies
+      run : |
+        pip install --upgrade pip
+        pip install --upgrade build setuptools twine wheel
+    - name: Build and publish
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run : |
+        python -m build
+        python -m twine upload dist/*
