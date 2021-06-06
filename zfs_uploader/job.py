@@ -5,8 +5,14 @@ from boto3.s3.transfer import TransferConfig
 
 from zfs_uploader.backup_db import BackupDB
 from zfs_uploader.snapshot_db import SnapshotDB
-from zfs_uploader.zfs import (open_snapshot_stream,
-                              open_snapshot_stream_inc, ZFSError)
+from zfs_uploader.zfs import (
+    get_snapshot_send_size, get_snapshot_send_size_inc,
+    open_snapshot_stream, open_snapshot_stream_inc, ZFSError)
+
+KB = 1024
+MB = KB * KB
+S3_MAX_CONCURRENCY = 20
+S3_MAX_PART_NUMBER = 10000
 
 
 class BackupError(Exception):
@@ -111,7 +117,6 @@ class ZFSjob:
                                   region_name=self._region,
                                   aws_access_key_id=self._access_key,
                                   aws_secret_access_key=self._secret_key)
-        self._s3_transfer_config = TransferConfig(max_concurrency=20)
         self._bucket = self._s3.Bucket(self._bucket_name)
         self._backup_db = BackupDB(self._bucket, self._file_system)
         self._snapshot_db = SnapshotDB(self._file_system)
@@ -194,6 +199,9 @@ class ZFSjob:
         """ Create snapshot and upload full backup. """
         snapshot = self._snapshot_db.create_snapshot()
         backup_time = snapshot.name
+        file_system = snapshot.file_system
+
+        transfer_config = _get_transfer_config(file_system, backup_time)
 
         s3_key = f'{self._file_system}/{backup_time}.full'
         self._logger.info(f'[{s3_key}] Starting full backup.')
@@ -201,7 +209,7 @@ class ZFSjob:
         with open_snapshot_stream(self.filesystem, backup_time, 'r') as f:
             self._bucket.upload_fileobj(f.stdout,
                                         s3_key,
-                                        Config=self._s3_transfer_config,
+                                        Config=transfer_config,
                                         ExtraArgs={
                                             'StorageClass': self._storage_class
                                         })
@@ -224,6 +232,10 @@ class ZFSjob:
         """
         snapshot = self._snapshot_db.create_snapshot()
         backup_time = snapshot.name
+        file_system = snapshot.file_system
+
+        transfer_config = _get_transfer_config(file_system,
+                                               backup_time_full, backup_time)
 
         s3_key = f'{self._file_system}/{backup_time}.inc'
         self._logger.info(f'[{s3_key}] Starting incremental backup.')
@@ -233,7 +245,7 @@ class ZFSjob:
             self._bucket.upload_fileobj(
                 f.stdout,
                 s3_key,
-                Config=self._s3_transfer_config,
+                Config=transfer_config,
                 ExtraArgs={
                     'StorageClass': self._storage_class
                 })
@@ -259,12 +271,14 @@ class ZFSjob:
         file_system = backup.file_system
         s3_key = backup.s3_key
 
+        transfer_config = TransferConfig(max_concurrency=S3_MAX_CONCURRENCY)
+
         self._logger.info(f'[{file_system}@{backup_time}] Restoring snapshot.')
         backup_object = self._s3.Object(self._bucket_name, s3_key)
 
         with open_snapshot_stream(self.filesystem, backup_time, 'w') as f:
             backup_object.download_fileobj(f.stdin,
-                                           Config=self._s3_transfer_config)
+                                           Config=transfer_config)
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
@@ -335,3 +349,20 @@ class ZFSjob:
             while len(backups_inc) > self._max_incremental_backups:
                 backup = backups_inc.pop(0)
                 self._delete_backup(backup)
+
+
+def _get_transfer_config(file_system, snapshot_name_1, snapshot_name_2=None):
+    """ Get transfer config. """
+    if snapshot_name_2:
+        send_size = int(get_snapshot_send_size_inc(file_system,
+                                                   snapshot_name_1,
+                                                   snapshot_name_2))
+    else:
+        send_size = int(get_snapshot_send_size(file_system, snapshot_name_1))
+
+    # should never get close to the max part number
+    chunk_size = send_size // (S3_MAX_PART_NUMBER - 100)
+    # only set chunk size if greater than default value
+    chunk_size = chunk_size if chunk_size > 8 * MB else 8 * MB
+    return TransferConfig(max_concurrency=S3_MAX_CONCURRENCY,
+                          multipart_chunksize=chunk_size)
