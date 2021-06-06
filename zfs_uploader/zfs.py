@@ -11,7 +11,7 @@ class ZFSError(Exception):
 
 def list_snapshots():
     """ List snapshots. """
-    cmd = ['zfs', 'list', '-t', 'snapshot']
+    cmd = ['zfs', 'list', '-p', '-t', 'snapshot']
     out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
     lines = out.stdout.splitlines()
@@ -50,6 +50,21 @@ def destroy_filesystem(filesystem):
     """ Destroy filesystem and filesystem snapshots. """
     cmd = ['zfs', 'destroy', '-r', filesystem]
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
+
+
+def get_snapshot_send_size(filesystem, snapshot_name):
+    cmd = ['zfs', 'send', '--parsable', '--dryrun',
+           f'{filesystem}@{snapshot_name}']
+    out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
+    return out.stdout.splitlines()[1].split()[1]
+
+
+def get_snapshot_send_size_inc(filesystem, snapshot_name_1, snapshot_name_2):
+    cmd = ['zfs', 'send', '--parsable', '--dryrun', '-i',
+           f'{filesystem}@{snapshot_name_1}',
+           f'{filesystem}@{snapshot_name_2}']
+    out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
+    return out.stdout.splitlines()[1].split()[1]
 
 
 def open_snapshot_stream(filesystem, snapshot_name, mode):
