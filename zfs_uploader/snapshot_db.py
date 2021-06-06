@@ -94,8 +94,8 @@ class SnapshotDB:
         for k, v in zfs.list_snapshots().items():
             if self._file_system in k:
                 file_system, name = k.split('@')
-                referenced = v['REFER']
-                used = v['USED']
+                referenced = int(v['REFER'])
+                used = int(v['USED'])
 
                 self._snapshots.update({
                     name: Snapshot(file_system, name, referenced, used)
@@ -139,10 +139,10 @@ class Snapshot:
             ZFS filesystem.
         name : str
             Snapshot name.
-        referenced : str
-            Space referenced by snapshot.
-        used : str
-            Space used by snapshot.
+        referenced : int
+            Space referenced by snapshot in bytes.
+        used : int
+            Space used by snapshot in bytes.
 
         """
         self._file_system = file_system

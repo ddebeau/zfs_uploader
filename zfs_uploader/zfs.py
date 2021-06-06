@@ -11,7 +11,7 @@ class ZFSError(Exception):
 
 def list_snapshots():
     """ List snapshots. """
-    cmd = ['zfs', 'list', '-t', 'snapshot']
+    cmd = ['zfs', 'list', '-p', '-t', 'snapshot']
     out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
     lines = out.stdout.splitlines()
