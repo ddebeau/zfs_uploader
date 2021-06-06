@@ -122,12 +122,12 @@ class Snapshot:
 
     @property
     def referenced(self):
-        """ Space referenced by snapshot. """
+        """ Space referenced by snapshot in bytes. """
         return self._referenced
 
     @property
     def used(self):
-        """ Space used by snapshot. """
+        """ Space used by snapshot in bytes. """
         return self._used
 
     def __init__(self, file_system, name, referenced, used):
