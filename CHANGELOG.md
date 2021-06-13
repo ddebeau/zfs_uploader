@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Add destination filesystem option to `zfsup restore` 
+[#32](https://github.com/ddebeau/zfs_uploader/issues/32)
+  
+### Fixed
+
+- Fix bug where `zfsup restore` doesn't work if the filesystem has changed 
+  since the most recent snapshot. The command now destroys snapshots and 
+  data that were written after the most recent snapshot.
+[#33](https://github.com/ddebeau/zfs_uploader/issues/33)
+  
 ## [0.2.0](https://github.com/ddebeau/zfs_uploader/compare/0.1.2...0.2.0) 2021-06-06
 
 ### Added
