@@ -5,9 +5,10 @@ from boto3.s3.transfer import TransferConfig
 
 from zfs_uploader.backup_db import BackupDB
 from zfs_uploader.snapshot_db import SnapshotDB
-from zfs_uploader.zfs import (
-    get_snapshot_send_size, get_snapshot_send_size_inc,
-    open_snapshot_stream, open_snapshot_stream_inc, ZFSError)
+from zfs_uploader.zfs import (create_filesystem, get_snapshot_send_size,
+                              get_snapshot_send_size_inc,
+                              open_snapshot_stream,
+                              open_snapshot_stream_inc, ZFSError)
 
 KB = 1024
 MB = KB * KB
@@ -80,6 +81,11 @@ class ZFSjob:
         """ BackupDB """
         return self._backup_db
 
+    @property
+    def snapshot_db(self):
+        """ SnapshotDB """
+        return self._snapshot_db
+
     def __init__(self, bucket_name, access_key, secret_key, file_system,
                  region=None, cron=None, max_snapshots=None,
                  max_incremental_backups=None, storage_class=None):
@@ -147,16 +153,22 @@ class ZFSjob:
 
         self._logger.info(f'[{self._file_system}] Finished job.')
 
-    def restore(self, backup_time=None):
-        """ Restore from most backup.
+    def restore(self, backup_time=None, file_system=None):
+        """ Restore from backup.
 
         Defaults to most recent backup if backup_time is not specified.
 
+        WARNING: If restoring to a file system that already exists, snapshots
+        and data that were written after the backup will be destroyed.
+
         Parameters
         ----------
-        backup_time : str
+        backup_time : str, optional
             Backup time in %Y%m%d_%H%M%S format.
 
+        file_system : str, optional
+            File system to restore to. Defaults to the file system that the
+            backup was taken from.
         """
         self._snapshot_db.refresh()
         snapshots = self._snapshot_db.get_snapshot_names()
@@ -174,26 +186,31 @@ class ZFSjob:
         backup_type = backup.backup_type
         s3_key = backup.s3_key
 
+        if file_system:
+            out = create_filesystem(file_system)
+            if out.returncode:
+                raise ZFSError(out.stderr)
+
         if backup_type == 'full':
-            if backup_time in snapshots:
+            if backup_time in snapshots and file_system is None:
                 self._logger.info(f'[{s3_key}] Snapshot already exists.')
             else:
-                self._restore_snapshot(backup)
+                self._restore_snapshot(backup, file_system)
 
         elif backup_type == 'inc':
             # restore full backup first
             backup_full = self._backup_db.get_backup(backup.dependency)
 
-            if backup_full.backup_time in snapshots:
+            if backup_full.backup_time in snapshots and file_system is None:
                 self._logger.info(f'[{backup_full.s3_key}] Snapshot already '
                                   f'exists.')
             else:
-                self._restore_snapshot(backup_full)
+                self._restore_snapshot(backup_full, file_system)
 
-            if backup_time in snapshots:
+            if backup_time in snapshots and file_system is None:
                 self._logger.info(f'[{s3_key}] Snapshot already exists.')
             else:
-                self._restore_snapshot(backup)
+                self._restore_snapshot(backup, file_system)
 
     def _backup_full(self):
         """ Create snapshot and upload full backup. """
@@ -259,16 +276,19 @@ class ZFSjob:
         self._logger.info(f'[{self._file_system}] '
                           'Finished incremental backup.')
 
-    def _restore_snapshot(self, backup):
+    def _restore_snapshot(self, backup, file_system=None):
         """ Restore snapshot from backup.
 
         Parameters
         ----------
         backup : Backup
 
+        file_system : str, optional
+            File system to restore to. Defaults to the file system that the
+            backup was taken from.
         """
         backup_time = backup.backup_time
-        file_system = backup.file_system
+        file_system = file_system or backup.file_system
         s3_key = backup.s3_key
 
         transfer_config = TransferConfig(max_concurrency=S3_MAX_CONCURRENCY)
@@ -276,9 +296,12 @@ class ZFSjob:
         self._logger.info(f'[{file_system}@{backup_time}] Restoring snapshot.')
         backup_object = self._s3.Object(self._bucket_name, s3_key)
 
-        with open_snapshot_stream(self.filesystem, backup_time, 'w') as f:
-            backup_object.download_fileobj(f.stdin,
-                                           Config=transfer_config)
+        with open_snapshot_stream(file_system, backup_time, 'w') as f:
+            try:
+                backup_object.download_fileobj(f.stdin,
+                                               Config=transfer_config)
+            except BrokenPipeError:
+                pass
             stderr = f.stderr.read().decode('utf-8')
         if f.returncode:
             raise ZFSError(stderr)
