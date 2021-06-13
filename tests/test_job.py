@@ -22,10 +22,13 @@ class JobTests(unittest.TestCase):
         with open(self.test_file, 'w') as f:
             f.write(self.test_data)
 
+        self.file_system_2 = 'test-pool/test-filesystem-2'
+
     def tearDown(self):
-        out = destroy_filesystem(self.job.filesystem)
-        if out.returncode:
-            self.assertIn('dataset does not exist', out.stderr)
+        for filesystem in [self.job.filesystem, self.file_system_2]:
+            out = destroy_filesystem(filesystem)
+            if out.returncode:
+                self.assertIn('dataset does not exist', out.stderr)
 
         for item in self.bucket.objects.all():
             item.delete()
@@ -115,6 +118,20 @@ class JobTests(unittest.TestCase):
         with open(self.test_file, 'r') as f:
             out = f.read()
         self.assertEqual(self.test_data + 'append', out)
+
+    def test_restore_to_different_filesystem(self):
+        """ Test restore to a different filesystem. """
+        # Given
+        self.job.start()
+
+        # When
+        self.job.restore(file_system=self.file_system_2)
+
+        # Then
+        test_file = f'/{self.file_system_2}/test_file'
+        with open(test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data, out)
 
     def test_limit_snapshots(self):
         """ Test the snapshot number limiter. """

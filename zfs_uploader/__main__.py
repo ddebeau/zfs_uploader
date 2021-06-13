@@ -79,12 +79,17 @@ def list_backups(config_path, filesystem):
 @click.option('--config-path', default='config.cfg',
               help='Config file path.',
               show_default=True)
+@click.option('--destination', help='Destination filesystem.')
 @click.argument('filesystem')
 @click.argument('backup-time', required=False)
-def restore(config_path, filesystem, backup_time):
+def restore(config_path, destination, filesystem, backup_time):
     """ Restore from backup.
 
-    Defaults to most recent backup if backup_time is not specified.
+    Defaults to most recent backup if backup-time is not specified.
+
+    WARNING: If restoring to a file system that already exists, snapshots
+    and data that were written after the backup will be destroyed. Set
+    `destination` in order to restore to a new file system.
 
     """
     config = Config(config_path)
@@ -94,7 +99,7 @@ def restore(config_path, filesystem, backup_time):
         print('Filesystem does not exist.')
         sys.exit(1)
 
-    job.restore(backup_time) if backup_time else job.restore()
+    job.restore(backup_time, destination)
 
     print('Restore successful.')
 
