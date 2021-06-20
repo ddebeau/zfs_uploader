@@ -1,5 +1,6 @@
 import unittest
 import warnings
+from traceback import format_exception
 
 from click.testing import CliRunner
 
@@ -44,7 +45,7 @@ class CLITests(unittest.TestCase):
         result = self.runner.invoke(cli, ['list', self.job.filesystem])
 
         # Then
-        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.exit_code, 0, msg=_format_exception(result))
 
     def test_restore_command(self):
         """ Test restore command. """
@@ -60,9 +61,13 @@ class CLITests(unittest.TestCase):
 
         # When
         result = self.runner.invoke(cli, ['restore', self.job.filesystem])
-        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.exit_code, 0, msg=_format_exception(result))
 
         # Then
         with open(self.test_file, 'r') as f:
             out = f.read()
         self.assertEqual(self.test_data + 'append', out)
+
+
+def _format_exception(result):
+    return ''.join(format_exception(*result.exc_info))
