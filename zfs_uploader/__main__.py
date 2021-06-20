@@ -13,19 +13,14 @@ LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 
 @click.group()
-def cli():
-    pass
-
-
-@cli.command()
 @click.option('--config-path', default='config.cfg',
               help='Config file path.',
               show_default=True)
 @click.option('--log-path', default='zfs_uploader.log',
               help='Log file path.',
               show_default=True)
-def backup(config_path, log_path):
-    """ Start backup job scheduler. """
+@click.pass_context
+def cli(ctx, config_path, log_path):
     logger = logging.getLogger('zfs_uploader')
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter(LOG_FORMAT)
@@ -36,6 +31,19 @@ def backup(config_path, log_path):
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+
+    ctx.obj = {
+        'config_path': config_path,
+        'logger': logger
+    }
+
+
+@cli.command()
+@click.pass_context
+def backup(ctx):
+    """ Start backup job scheduler. """
+    config_path = ctx.obj['config_path']
+    logger = ctx.obj['logger']
 
     config = Config(config_path)
     scheduler = BlockingScheduler(
@@ -55,34 +63,48 @@ def backup(config_path, log_path):
 
 
 @cli.command('list')
-@click.option('--config-path', default='config.cfg',
-              help='Config file path.',
-              show_default=True)
-@click.argument('filesystem')
-def list_backups(config_path, filesystem):
+@click.argument('filesystem', required=False)
+@click.pass_context
+def list_backups(ctx, filesystem):
     """ List backups. """
+    config_path = ctx.obj['config_path']
+    logger = ctx.obj['logger']
+
+    logger.setLevel('CRITICAL')
+
     config = Config(config_path)
-    job = config.jobs.get(filesystem)
 
-    if job is None:
-        print('Filesystem does not exist.')
-        sys.exit(1)
+    if filesystem:
+        job = config.jobs.get(filesystem)
+        jobs = {filesystem: job}
 
-    print('{0:<16} {1:<16} {2:<5}'.format('time', 'dependency', 'type'))
-    print('-'*38)
-    for b in job.backup_db.get_backups():
-        dependency = b.dependency or str(b.dependency)
-        print(f'{b.backup_time:<16} {dependency:<16} {b.backup_type:<5}')
+        if job is None:
+            print('Filesystem does not exist in config file.')
+            sys.exit(1)
+
+    else:
+        jobs = config.jobs
+
+        if jobs is None:
+            print('No filesystems exist in config file.')
+            sys.exit(1)
+
+    for filesystem, job in jobs.items():
+        print(f'{filesystem}:\n')
+        print('{0:<16} {1:<16} {2:<5}'.format('time', 'dependency', 'type'))
+        print('-'*38)
+        for b in job.backup_db.get_backups():
+            dependency = b.dependency or str(b.dependency)
+            print(f'{b.backup_time:<16} {dependency:<16} {b.backup_type:<5}')
+        print('\n')
 
 
 @cli.command()
-@click.option('--config-path', default='config.cfg',
-              help='Config file path.',
-              show_default=True)
 @click.option('--destination', help='Destination filesystem.')
 @click.argument('filesystem')
 @click.argument('backup-time', required=False)
-def restore(config_path, destination, filesystem, backup_time):
+@click.pass_context
+def restore(ctx, destination, filesystem, backup_time):
     """ Restore from backup.
 
     Defaults to most recent backup if backup-time is not specified.
@@ -92,6 +114,8 @@ def restore(config_path, destination, filesystem, backup_time):
     `destination` in order to restore to a new file system.
 
     """
+    config_path = ctx.obj['config_path']
+
     config = Config(config_path)
     job = config.jobs.get(filesystem)
 
