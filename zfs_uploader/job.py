@@ -234,8 +234,9 @@ class ZFSjob:
         if f.returncode:
             raise ZFSError(stderr)
 
-        self._check_backup(s3_key)
-        self._backup_db.create_backup(backup_time, 'full', s3_key)
+        backup_size = self._check_backup(s3_key)
+        self._backup_db.create_backup(backup_time, 'full', s3_key,
+                                      dependency=None, backup_size=backup_size)
         self._logger.info(f'[{self._file_system}] Finished full backup.')
 
     def _backup_incremental(self, backup_time_full):
@@ -270,9 +271,9 @@ class ZFSjob:
         if f.returncode:
             raise ZFSError(stderr)
 
-        self._check_backup(s3_key)
+        backup_size = self._check_backup(s3_key)
         self._backup_db.create_backup(backup_time, 'inc', s3_key,
-                                      backup_time_full)
+                                      backup_time_full, backup_size)
         self._logger.info(f'[{self._file_system}] '
                           'Finished incremental backup.')
 
@@ -331,11 +332,15 @@ class ZFSjob:
                 self._snapshot_db.delete_snapshot(snapshot.name)
 
     def _check_backup(self, s3_key):
-        """ Check if S3 object exists.
+        """ Check if S3 object exists and returns object size.
 
         Parameters
         ----------
         s3_key : str
+
+        Returns
+        -------
+        int
 
         """
         # load() will fail if object does not exist
@@ -343,6 +348,8 @@ class ZFSjob:
         backup_object.load()
         if backup_object.content_length == 0:
             raise BackupError('Backup upload failed.')
+
+        return backup_object.content_length
 
     def _delete_backup(self, backup):
         """ Delete backup.
