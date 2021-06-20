@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `zfsup list` now shows all filesystems if one isn't provided. 
 [#31](https://github.com/ddebeau/zfs_uploader/issues/31)
  
-- 'zfsup list' now shows backup size. 
+- `zfsup list` now shows backup size. 
 [#28](https://github.com/ddebeau/zfs_uploader/issues/28)
   
 ### Fixed
