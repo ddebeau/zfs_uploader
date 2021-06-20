@@ -91,11 +91,14 @@ def list_backups(ctx, filesystem):
 
     for filesystem, job in jobs.items():
         print(f'{filesystem}:\n')
-        print('{0:<16} {1:<16} {2:<5}'.format('time', 'dependency', 'type'))
-        print('-'*38)
+        print('{0:<16} {1:<16} {2:<5} {3:<14}'.format('time', 'dependency',
+                                                      'type', 'size (bytes)'))
+        print('-'*52)
         for b in job.backup_db.get_backups():
             dependency = b.dependency or str(b.dependency)
-            print(f'{b.backup_time:<16} {dependency:<16} {b.backup_type:<5}')
+            backup_size = b.backup_size or str(b.backup_size)
+            print(f'{b.backup_time:<16} {dependency:<16} '
+                  f'{b.backup_type:<5} {backup_size:<14}')
         print('\n')
 
 

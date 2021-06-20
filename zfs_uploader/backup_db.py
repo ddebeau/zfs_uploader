@@ -38,7 +38,7 @@ class BackupDB:
         self.download()
 
     def create_backup(self, backup_time, backup_type, s3_key,
-                      dependency=None):
+                      dependency=None, backup_size=None):
         """ Create backup object and upload `backup.db` file.
 
         Parameters
@@ -52,6 +52,8 @@ class BackupDB:
         dependency : str, optional
             Backup time of dependency in %Y%m%d_%H%M%S format. Used for
             storing the dependent full backup for an incremental backup.
+        backup_size : int, optional
+            Backup size in bytes.
 
         """
         if backup_time in self._backups:
@@ -62,7 +64,7 @@ class BackupDB:
 
         self._backups.update({
             backup_time: Backup(backup_time, backup_type, self._file_system,
-                                s3_key, dependency)
+                                s3_key, dependency, backup_size)
         })
 
         self.upload()
@@ -213,8 +215,13 @@ class Backup:
         """ Backup time of dependency. """
         return self._dependency
 
+    @property
+    def backup_size(self):
+        """ Backup size in bytes. """
+        return self._backup_size
+
     def __init__(self, backup_time, backup_type, file_system, s3_key,
-                 dependency=None):
+                 dependency=None, backup_size=None):
         """ Create Backup object.
 
         Parameters
@@ -228,6 +235,8 @@ class Backup:
         dependency : str, optional
             Backup time of dependency in %Y%m%d_%H%M%S format. Used for
             storing the dependent full backup for an incremental backup.
+        backup_size : int, optional
+            Backup size in bytes.
 
         """
         if _validate_backup_time(backup_time):
@@ -248,12 +257,15 @@ class Backup:
                 raise ValueError('dependency is wrong format')
         self._dependency = dependency
 
+        self._backup_size = backup_size
+
     def __eq__(self, other):
         return all((self._backup_time == other._backup_time, # noqa
                     self._backup_type == other._backup_type, # noqa
                     self._file_system == other._file_system, # noqa
                     self._s3_key == other._s3_key, # noqa
-                    self._dependency == other._dependency # noqa
+                    self._dependency == other._dependency, # noqa
+                    self._backup_size == other._backup_size # noqa
                     ))
 
     def __hash__(self):
@@ -261,7 +273,8 @@ class Backup:
                      self._backup_type,
                      self._file_system,
                      self._s3_key,
-                     self._dependency
+                     self._dependency,
+                     self._backup_size
                      ))
 
 
@@ -273,7 +286,8 @@ def _json_default(obj):
             'backup_type': obj._backup_type, # noqa
             'file_system': obj._file_system, # noqa
             's3_key': obj._s3_key, # noqa
-            'dependency': obj._dependency # noqa
+            'dependency': obj._dependency, # noqa
+            'backup_size': obj._backup_size # noqa
         }
 
 
