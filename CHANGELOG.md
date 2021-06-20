@@ -12,12 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add destination filesystem option to `zfsup restore` 
 [#32](https://github.com/ddebeau/zfs_uploader/issues/32)
   
+- `zfsup list` now shows all filesystems if one isn't provided. 
+[#31](https://github.com/ddebeau/zfs_uploader/issues/31)
+ 
+- 'zfsup list' now shows backup size. 
+[#28](https://github.com/ddebeau/zfs_uploader/issues/28)
+  
 ### Fixed
 
 - Fix bug where `zfsup restore` doesn't work if the filesystem has changed 
   since the most recent snapshot. The command now destroys snapshots and 
-  data that were written after the most recent snapshot.
+  data that were written after the most recent snapshot. 
 [#33](https://github.com/ddebeau/zfs_uploader/issues/33)
+  
+- Fix bug where only the `zfsup backup` command would log. 
+[#35](https://github.com/ddebeau/zfs_uploader/issues/35)
   
 ## [0.2.0](https://github.com/ddebeau/zfs_uploader/compare/0.1.2...0.2.0) 2021-06-06
 
