@@ -193,7 +193,9 @@ class ZFSjob:
 
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f's3_key={s3_key} '
+                self._logger.info(f'filesystem={filesystem} '
+                                  f'snapshot_name={backup_time} '
+                                  f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
                 self._restore_snapshot(backup, filesystem)
@@ -203,13 +205,17 @@ class ZFSjob:
             backup_full = self._backup_db.get_backup(backup.dependency)
 
             if backup_full.backup_time in snapshots and filesystem is None:
-                self._logger.info(f's3_key={backup_full.s3_key} '
+                self._logger.info(f'filesystem={filesystem} '
+                                  f'snapshot_name={backup_full.backup_time} '
+                                  f's3_key={backup_full.s3_key} '
                                   'msg="Snapshot already exists.')
             else:
                 self._restore_snapshot(backup_full, filesystem)
 
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f's3_key={s3_key} '
+                self._logger.info(f'filesystem={filesystem} '
+                                  f'snapshot_name={backup_time} '
+                                  f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
                 self._restore_snapshot(backup, filesystem)
@@ -222,10 +228,13 @@ class ZFSjob:
 
         transfer_config = _get_transfer_config(filesystem, backup_time)
 
-        s3_key = f'{self._filesystem}/{backup_time}.full'
-        self._logger.info(f's3_key={s3_key} msg="Starting full backup."')
+        s3_key = f'{filesystem}/{backup_time}.full'
+        self._logger.info(f'filesystem={filesystem} '
+                          f'snapshot_name={backup_time} '
+                          f's3_key={s3_key} '
+                          'msg="Starting full backup."')
 
-        with open_snapshot_stream(self.filesystem, backup_time, 'r') as f:
+        with open_snapshot_stream(filesystem, backup_time, 'r') as f:
             self._bucket.upload_fileobj(f.stdout,
                                         s3_key,
                                         Config=transfer_config,
@@ -239,7 +248,9 @@ class ZFSjob:
         backup_size = self._check_backup(s3_key)
         self._backup_db.create_backup(backup_time, 'full', s3_key,
                                       dependency=None, backup_size=backup_size)
-        self._logger.info(f'filesystem={self._filesystem}] '
+        self._logger.info(f'filesystem={filesystem} '
+                          f'snapshot_name={backup_time} '
+                          f's3_key={s3_key} '
                           'msg="Finished full backup."')
 
     def _backup_incremental(self, backup_time_full):
@@ -258,12 +269,14 @@ class ZFSjob:
         transfer_config = _get_transfer_config(filesystem,
                                                backup_time_full, backup_time)
 
-        s3_key = f'{self._filesystem}/{backup_time}.inc'
-        self._logger.info(f's3_key={s3_key} '
+        s3_key = f'{filesystem}/{backup_time}.inc'
+        self._logger.info(f'filesystem={filesystem} '
+                          f'snapshot_name={backup_time} '
+                          f's3_key={s3_key} '
                           'msg="Starting incremental backup."')
 
         with open_snapshot_stream_inc(
-                self.filesystem, backup_time_full, backup_time) as f:
+                filesystem, backup_time_full, backup_time) as f:
             self._bucket.upload_fileobj(
                 f.stdout,
                 s3_key,
@@ -278,7 +291,9 @@ class ZFSjob:
         backup_size = self._check_backup(s3_key)
         self._backup_db.create_backup(backup_time, 'inc', s3_key,
                                       backup_time_full, backup_size)
-        self._logger.info(f'filesystem={self._filesystem} '
+        self._logger.info(f'filesystem={filesystem} '
+                          f'snapshot_name={backup_time} '
+                          f's3_key={s3_key} '
                           'msg="Finished incremental backup."')
 
     def _restore_snapshot(self, backup, filesystem=None):
@@ -300,6 +315,7 @@ class ZFSjob:
 
         self._logger.info(f'filesystem={filesystem} '
                           f'snapshot_name={backup_time} '
+                          f's3_key={s3_key} '
                           'msg="Restoring snapshot."')
         backup_object = self._s3.Object(self._bucket_name, s3_key)
 
@@ -382,7 +398,7 @@ class ZFSjob:
 
         if backups_inc:
             if len(backups_inc) > self._max_incremental_backups:
-                self._logger.info(f'filesystem={self._filesystem}] '
+                self._logger.info(f'filesystem={self._filesystem} '
                                   'msg="Incremental backup limit achieved."')
 
             while len(backups_inc) > self._max_incremental_backups:

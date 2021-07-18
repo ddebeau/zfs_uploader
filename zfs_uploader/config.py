@@ -22,10 +22,12 @@ class Config:
             File path to config file.
 
         """
-        self._logger = logging.getLogger(__name__)
-        self._logger.info('msg="Loading configuration file."')
-
         file_path = file_path or 'config.cfg'
+
+        self._logger = logging.getLogger(__name__)
+        self._logger.info(f'file_path={file_path} '
+                          'msg="Loading configuration file."')
+
         if not os.path.isfile(file_path):
             raise IOError('No configuration file found.')
 
