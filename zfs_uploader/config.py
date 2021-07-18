@@ -40,7 +40,8 @@ class Config:
         self._jobs = {}
         for k, v in self._cfg.items():
             if k != 'DEFAULT':
-                bucket_name = v.get('bucket_name') or default.get('bucket_name')
+                bucket_name = (v.get('bucket_name') or
+                               default.get('bucket_name'))
                 access_key = v.get('access_key') or default.get('access_key')
                 secret_key = v.get('secret_key') or default.get('secret_key')
                 filesystem = k
