@@ -438,21 +438,26 @@ class TransferCallback:
 
     def callback(self, transfer):
         time_1 = time.time()
+        time_diff = time_1 - self._time_0
 
         self._transfer_buffer += transfer
 
-        if time_1 - self._time_0 > 5:
+        if time_diff > 5:
             transfer_1 = self._transfer_0 + self._transfer_buffer
 
             progress = transfer_1 / self._file_size
-            speed = self._transfer_buffer / (time_1 - self._time_0)
+            speed = self._transfer_buffer / time_diff
 
-            self._logger.info(f'filesystem={self._filesystem} '
-                              f'snapshot_name={self._backup_time} '
-                              f's3_key={self._s3_key} '
-                              f'progress={round(progress * 100, 2)}% '
-                              f'speed="{round(speed / MB, 2)} MBps" '
-                              f'transferred="{round(transfer_1 / MB, 2)} MB"')
+            self._logger.info(
+                f'filesystem={self._filesystem} '
+                f'snapshot_name={self._backup_time} '
+                f's3_key={self._s3_key} '
+                f'progress={round(progress * 100)}% '
+                f'speed="{round(speed / MB)} MBps" '
+                f'transferred="{round(transfer_1 / MB)}/'
+                f'{round(self._file_size / MB)} MB" '
+                f'time_elapsed={round(time_diff / 60)}m'
+            )
 
             self._transfer_0 = transfer_1
             self._transfer_buffer = 0
