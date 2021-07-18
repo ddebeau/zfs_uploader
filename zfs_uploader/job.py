@@ -237,7 +237,8 @@ class ZFSjob:
                           'msg="Starting full backup."')
 
         with open_snapshot_stream(filesystem, backup_time, 'r') as f:
-            transfer_callback = TransferCallback(self._logger, send_size)
+            transfer_callback = TransferCallback(self._logger, send_size,
+                                                 s3_key)
             self._bucket.upload_fileobj(f.stdout,
                                         s3_key,
                                         Callback=transfer_callback.callback,
@@ -283,7 +284,8 @@ class ZFSjob:
 
         with open_snapshot_stream_inc(
                 filesystem, backup_time_full, backup_time) as f:
-            transfer_callback = TransferCallback(self._logger, send_size)
+            transfer_callback = TransferCallback(self._logger, send_size,
+                                                 s3_key)
             self._bucket.upload_fileobj(
                 f.stdout,
                 s3_key,
@@ -329,7 +331,8 @@ class ZFSjob:
         backup_object = self._s3.Object(self._bucket_name, s3_key)
 
         with open_snapshot_stream(filesystem, backup_time, 'w') as f:
-            transfer_callback = TransferCallback(self._logger, backup_size)
+            transfer_callback = TransferCallback(self._logger, backup_size,
+                                                 s3_key)
             try:
                 backup_object.download_fileobj(
                     f.stdin,
@@ -419,9 +422,10 @@ class ZFSjob:
 
 
 class TransferCallback:
-    def __init__(self, logger, file_size):
+    def __init__(self, logger, file_size, s3_key):
         self._logger = logger
         self._file_size = file_size
+        self._s3_key = s3_key
 
         self._transfer_0 = 0
         self._transfer_buffer = 0
@@ -438,7 +442,8 @@ class TransferCallback:
             progress = transfer_1 / self._file_size
             speed = self._transfer_buffer / (time_1 - self._time_0)
 
-            self._logger.info(f'progress={round(progress * 100, 2)}% '
+            self._logger.info(f's3_key={self._s3_key} '
+                              f'progress={round(progress * 100, 2)}% '
                               f'speed="{round(speed / MB, 2)} MBps" '
                               f'transferred="{round(transfer_1 / MB, 2)} MB"')
 
