@@ -230,6 +230,8 @@ class Backup:
             Backup time in %Y%m%d_%H%M%S format.
         backup_type : str
             Supported backup types are `full` and `inc`.
+        filesystem : str
+            ZFS filesystem.
         s3_key : str
             Backup S3 key.
         dependency : str, optional
