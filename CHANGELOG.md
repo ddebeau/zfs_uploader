@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Switch to logfmt from custom format. 
 [#40](https://github.com/ddebeau/zfs_uploader/issues/40)
+  
+### Fixed
+
+- Check for configuration file before running CLI commands.
+[#36](https://github.com/ddebeau/zfs_uploader/issues/36)
 
 ## [0.3.1](https://github.com/ddebeau/zfs_uploader/compare/0.3.0...0.3.1) 2021-07-15
   
