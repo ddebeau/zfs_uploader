@@ -194,7 +194,7 @@ class ZFSjob:
 
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={filesystem} '
+                self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_time} '
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
@@ -206,7 +206,7 @@ class ZFSjob:
             backup_full = self._backup_db.get_backup(backup.dependency)
 
             if backup_full.backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={filesystem} '
+                self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_full.backup_time} '
                                   f's3_key={backup_full.s3_key} '
                                   'msg="Snapshot already exists.')
@@ -214,7 +214,7 @@ class ZFSjob:
                 self._restore_snapshot(backup_full, filesystem)
 
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={filesystem} '
+                self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_time} '
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
@@ -238,6 +238,7 @@ class ZFSjob:
 
         with open_snapshot_stream(filesystem, backup_time, 'r') as f:
             transfer_callback = TransferCallback(self._logger, send_size,
+                                                 filesystem, backup_time,
                                                  s3_key)
             self._bucket.upload_fileobj(f.stdout,
                                         s3_key,
@@ -285,6 +286,7 @@ class ZFSjob:
         with open_snapshot_stream_inc(
                 filesystem, backup_time_full, backup_time) as f:
             transfer_callback = TransferCallback(self._logger, send_size,
+                                                 filesystem, backup_time,
                                                  s3_key)
             self._bucket.upload_fileobj(
                 f.stdout,
@@ -332,6 +334,7 @@ class ZFSjob:
 
         with open_snapshot_stream(filesystem, backup_time, 'w') as f:
             transfer_callback = TransferCallback(self._logger, backup_size,
+                                                 filesystem, backup_time,
                                                  s3_key)
             try:
                 backup_object.download_fileobj(
@@ -422,9 +425,11 @@ class ZFSjob:
 
 
 class TransferCallback:
-    def __init__(self, logger, file_size, s3_key):
+    def __init__(self, logger, file_size, filesystem, backup_time, s3_key):
         self._logger = logger
         self._file_size = file_size
+        self._filesystem = filesystem
+        self._backup_time = backup_time
         self._s3_key = s3_key
 
         self._transfer_0 = 0
@@ -433,19 +438,26 @@ class TransferCallback:
 
     def callback(self, transfer):
         time_1 = time.time()
+        time_diff = time_1 - self._time_0
 
         self._transfer_buffer += transfer
 
-        if time_1 - self._time_0 > 5:
+        if time_diff > 5:
             transfer_1 = self._transfer_0 + self._transfer_buffer
 
             progress = transfer_1 / self._file_size
-            speed = self._transfer_buffer / (time_1 - self._time_0)
+            speed = self._transfer_buffer / time_diff
 
-            self._logger.info(f's3_key={self._s3_key} '
-                              f'progress={round(progress * 100, 2)}% '
-                              f'speed="{round(speed / MB, 2)} MBps" '
-                              f'transferred="{round(transfer_1 / MB, 2)} MB"')
+            self._logger.info(
+                f'filesystem={self._filesystem} '
+                f'snapshot_name={self._backup_time} '
+                f's3_key={self._s3_key} '
+                f'progress={round(progress * 100)}% '
+                f'speed="{round(speed / MB)} MBps" '
+                f'transferred="{round(transfer_1 / MB)}/'
+                f'{round(self._file_size / MB)} MB" '
+                f'time_elapsed={round(time_diff / 60)}m'
+            )
 
             self._transfer_0 = transfer_1
             self._transfer_buffer = 0

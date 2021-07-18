@@ -57,7 +57,7 @@ def backup(ctx):
 
     for job in config.jobs.values():
         logger.info(f'filesystem={job.filesystem} '
-                    f'cron={job.cron} '
+                    f'cron="{job.cron}" '
                     'msg="Adding job."')
         scheduler.add_job(job.start, 'cron', **job.cron,
                           misfire_grace_time=2*60*60,
