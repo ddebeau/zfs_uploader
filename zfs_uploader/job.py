@@ -194,7 +194,7 @@ class ZFSjob:
 
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={filesystem} '
+                self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_time} '
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
@@ -206,7 +206,7 @@ class ZFSjob:
             backup_full = self._backup_db.get_backup(backup.dependency)
 
             if backup_full.backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={filesystem} '
+                self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_full.backup_time} '
                                   f's3_key={backup_full.s3_key} '
                                   'msg="Snapshot already exists.')
@@ -214,7 +214,7 @@ class ZFSjob:
                 self._restore_snapshot(backup_full, filesystem)
 
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={filesystem} '
+                self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_time} '
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
