@@ -1,4 +1,5 @@
 import logging
+import time
 
 import boto3
 from boto3.s3.transfer import TransferConfig
@@ -226,7 +227,8 @@ class ZFSjob:
         backup_time = snapshot.name
         filesystem = snapshot.filesystem
 
-        transfer_config = _get_transfer_config(filesystem, backup_time)
+        send_size = int(get_snapshot_send_size(filesystem, backup_time))
+        transfer_config = _get_transfer_config(send_size)
 
         s3_key = f'{filesystem}/{backup_time}.full'
         self._logger.info(f'filesystem={filesystem} '
@@ -235,8 +237,10 @@ class ZFSjob:
                           'msg="Starting full backup."')
 
         with open_snapshot_stream(filesystem, backup_time, 'r') as f:
+            transfer_callback = TransferCallback(self._logger, send_size)
             self._bucket.upload_fileobj(f.stdout,
                                         s3_key,
+                                        Callback=transfer_callback.callback,
                                         Config=transfer_config,
                                         ExtraArgs={
                                             'StorageClass': self._storage_class
@@ -266,8 +270,10 @@ class ZFSjob:
         backup_time = snapshot.name
         filesystem = snapshot.filesystem
 
-        transfer_config = _get_transfer_config(filesystem,
-                                               backup_time_full, backup_time)
+        send_size = int(get_snapshot_send_size_inc(filesystem,
+                                                   backup_time_full,
+                                                   backup_time))
+        transfer_config = _get_transfer_config(send_size)
 
         s3_key = f'{filesystem}/{backup_time}.inc'
         self._logger.info(f'filesystem={filesystem} '
@@ -277,9 +283,11 @@ class ZFSjob:
 
         with open_snapshot_stream_inc(
                 filesystem, backup_time_full, backup_time) as f:
+            transfer_callback = TransferCallback(self._logger, send_size)
             self._bucket.upload_fileobj(
                 f.stdout,
                 s3_key,
+                Callback=transfer_callback.callback,
                 Config=transfer_config,
                 ExtraArgs={
                     'StorageClass': self._storage_class
@@ -308,6 +316,7 @@ class ZFSjob:
             backup was taken from.
         """
         backup_time = backup.backup_time
+        backup_size = backup.backup_size
         filesystem = filesystem or backup.filesystem
         s3_key = backup.s3_key
 
@@ -320,9 +329,12 @@ class ZFSjob:
         backup_object = self._s3.Object(self._bucket_name, s3_key)
 
         with open_snapshot_stream(filesystem, backup_time, 'w') as f:
+            transfer_callback = TransferCallback(self._logger, backup_size)
             try:
-                backup_object.download_fileobj(f.stdin,
-                                               Config=transfer_config)
+                backup_object.download_fileobj(
+                    f.stdin,
+                    Callback=transfer_callback.callback,
+                    Config=transfer_config)
             except BrokenPipeError:
                 pass
             stderr = f.stderr.read().decode('utf-8')
@@ -406,15 +418,37 @@ class ZFSjob:
                 self._delete_backup(backup)
 
 
-def _get_transfer_config(filesystem, snapshot_name_1, snapshot_name_2=None):
-    """ Get transfer config. """
-    if snapshot_name_2:
-        send_size = int(get_snapshot_send_size_inc(filesystem,
-                                                   snapshot_name_1,
-                                                   snapshot_name_2))
-    else:
-        send_size = int(get_snapshot_send_size(filesystem, snapshot_name_1))
+class TransferCallback:
+    def __init__(self, logger, file_size):
+        self._logger = logger
+        self._file_size = file_size
 
+        self._transfer_0 = 0
+        self._transfer_buffer = 0
+        self._time_0 = time.time()
+
+    def callback(self, transfer):
+        time_1 = time.time()
+
+        self._transfer_buffer += transfer
+
+        if time_1 - self._time_0 > 5:
+            transfer_1 = self._transfer_0 + self._transfer_buffer
+
+            progress = transfer_1 / self._file_size
+            speed = self._transfer_buffer / (time_1 - self._time_0)
+
+            self._logger.info(f'progress={round(progress * 100, 2)}% '
+                              f'speed="{round(speed / MB, 2)} MBps" '
+                              f'transferred="{round(transfer_1 / MB, 2)} MB"')
+
+            self._transfer_0 = transfer_1
+            self._transfer_buffer = 0
+            self._time_0 = time_1
+
+
+def _get_transfer_config(send_size):
+    """ Get transfer config. """
     # should never get close to the max part number
     chunk_size = send_size // (S3_MAX_PART_NUMBER - 100)
     # only set chunk size if greater than default value
