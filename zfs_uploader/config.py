@@ -1,6 +1,7 @@
 from configparser import ConfigParser
 import logging
 import os
+import sys
 
 from zfs_uploader.job import ZFSjob
 
@@ -29,7 +30,8 @@ class Config:
                           'msg="Loading configuration file."')
 
         if not os.path.isfile(file_path):
-            raise IOError('No configuration file found.')
+            self._logger.critical('No configuration file found.')
+            sys.exit(1)
 
         self._cfg = ConfigParser()
         self._cfg.read(file_path)
@@ -38,6 +40,18 @@ class Config:
         self._jobs = {}
         for k, v in self._cfg.items():
             if k != 'DEFAULT':
+                bucket_name = v.get('bucket_name') or default.get('bucket_name')
+                access_key = v.get('access_key') or default.get('access_key')
+                secret_key = v.get('secret_key') or default.get('secret_key')
+                filesystem = k
+
+                if not all((bucket_name, access_key, secret_key)):
+                    self._logger.critical(f'file_path={file_path} '
+                                          f'filesystem={filesystem}'
+                                          'msg="bucket_name, access_key or '
+                                          'secret_key is missing from config.')
+                    sys.exit(1)
+
                 cron_dict = None
                 cron = v.get('cron') or default.get('cron')
                 if cron:
@@ -45,10 +59,10 @@ class Config:
 
                 self._jobs[k] = (
                     ZFSjob(
-                        v.get('bucket_name') or default.get('bucket_name'),
-                        v.get('access_key') or default.get('access_key'),
-                        v.get('secret_key') or default.get('secret_key'),
-                        filesystem=k,
+                        bucket_name,
+                        access_key,
+                        secret_key,
+                        filesystem,
                         region=v.get('region') or default.get('region'),
                         cron=cron_dict,
                         max_snapshots=(v.getint('max_snapshots') or
