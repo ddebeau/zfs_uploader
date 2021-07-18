@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add callback for S3 upload and download progress.
+[#26](https://github.com/ddebeau/zfs_uploader/issues/26)
+
 ### Changed
 
 - Switch to logfmt from custom format. 
