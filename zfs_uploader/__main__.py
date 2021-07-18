@@ -1,6 +1,7 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import os
 import sys
+from logging.handlers import RotatingFileHandler
 
 import click
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -9,7 +10,7 @@ from apscheduler.schedulers.background import BlockingScheduler
 from zfs_uploader import __version__
 from zfs_uploader.config import Config
 
-LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+LOG_FORMAT = 'time=%(asctime)s.%(msecs)03d level=%(levelname)s %(message)s'
 
 
 @click.group()
@@ -23,7 +24,7 @@ LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 def cli(ctx, config_path, log_path):
     logger = logging.getLogger('zfs_uploader')
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(LOG_FORMAT)
+    formatter = logging.Formatter(LOG_FORMAT, datefmt='%Y-%m-%dT%H:%M:%S')
 
     fh = RotatingFileHandler(log_path, maxBytes=5*1024*1024, backupCount=5)
     fh.setFormatter(formatter)
@@ -31,6 +32,10 @@ def cli(ctx, config_path, log_path):
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+
+    if not os.path.isfile(config_path):
+        print('No configuration file found.')
+        sys.exit(1)
 
     ctx.obj = {
         'config_path': config_path,
@@ -51,7 +56,9 @@ def backup(ctx):
     )
 
     for job in config.jobs.values():
-        logger.info(f'Adding job {job.filesystem}')
+        logger.info(f'filesystem={job.filesystem} '
+                    f'cron={job.cron} '
+                    'msg="Adding job."')
         scheduler.add_job(job.start, 'cron', **job.cron,
                           misfire_grace_time=2*60*60,
                           coalesce=True)

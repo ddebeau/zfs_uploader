@@ -6,11 +6,11 @@ from zfs_uploader import zfs
 
 class SnapshotDB:
     @property
-    def file_system(self):
+    def filesystem(self):
         """ ZFS file system. """
-        return self._file_system
+        return self._filesystem
 
-    def __init__(self, file_system):
+    def __init__(self, filesystem):
         """ Create SnapshotDB object.
 
         Snapshot DB is used for storing Snapshot objects. Creating a
@@ -18,11 +18,11 @@ class SnapshotDB:
 
         Parameters
         ----------
-        file_system : str
+        filesystem : str
             ZFS filesystem.
 
         """
-        self._file_system = file_system
+        self._filesystem = filesystem
         self._snapshots = {}
 
         self.refresh()
@@ -42,7 +42,7 @@ class SnapshotDB:
             sleep(1)
             name = get_date_time()
 
-        out = zfs.create_snapshot(self._file_system, name)
+        out = zfs.create_snapshot(self._filesystem, name)
         if out.returncode:
             raise zfs.ZFSError(out.stderr)
 
@@ -58,7 +58,7 @@ class SnapshotDB:
         name : str
 
         """
-        zfs.destroy_snapshot(self._file_system, name)
+        zfs.destroy_snapshot(self._filesystem, name)
 
         del self._snapshots[name]
 
@@ -92,13 +92,13 @@ class SnapshotDB:
         """ Refresh SnapshotDB with latest snapshots. """
         self._snapshots = {}
         for k, v in zfs.list_snapshots().items():
-            if self._file_system in k:
-                file_system, name = k.split('@')
+            if self._filesystem in k:
+                filesystem, name = k.split('@')
                 referenced = int(v['REFER'])
                 used = int(v['USED'])
 
                 self._snapshots.update({
-                    name: Snapshot(file_system, name, referenced, used)
+                    name: Snapshot(filesystem, name, referenced, used)
                 })
 
 
@@ -106,14 +106,14 @@ class Snapshot:
     """ Snapshot object. """
 
     @property
-    def file_system(self):
+    def filesystem(self):
         """ ZFS file system. """
-        return self._file_system
+        return self._filesystem
 
     @property
     def key(self):
-        """ file_system@backup_time identifier """
-        return f'{self._file_system}@{self._name}'
+        """ filesystem@backup_time identifier """
+        return f'{self._filesystem}@{self._name}'
 
     @property
     def name(self):
@@ -130,12 +130,12 @@ class Snapshot:
         """ Space used by snapshot in bytes. """
         return self._used
 
-    def __init__(self, file_system, name, referenced, used):
+    def __init__(self, filesystem, name, referenced, used):
         """ Create Snapshot object.
 
         Parameters
         ----------
-        file_system : str
+        filesystem : str
             ZFS filesystem.
         name : str
             Snapshot name.
@@ -145,20 +145,20 @@ class Snapshot:
             Space used by snapshot in bytes.
 
         """
-        self._file_system = file_system
+        self._filesystem = filesystem
         self._name = name
         self._referenced = referenced
         self._used = used
 
     def __eq__(self, other):
-        return all((self._file_system == other._file_system, # noqa
+        return all((self._filesystem == other._filesystem, # noqa
                     self._name == other._name, # noqa
                     self._referenced == other._referenced, # noqa
                     self._used == other._used # noqa
                     ))
 
     def __hash__(self):
-        return hash((self._file_system,
+        return hash((self._filesystem,
                      self._name,
                      self._referenced,
                      self._used

@@ -22,10 +22,10 @@ class JobTests(unittest.TestCase):
         with open(self.test_file, 'w') as f:
             f.write(self.test_data)
 
-        self.file_system_2 = 'test-pool/test-filesystem-2'
+        self.filesystem_2 = 'test-pool/test-filesystem-2'
 
     def tearDown(self):
-        for filesystem in [self.job.filesystem, self.file_system_2]:
+        for filesystem in [self.job.filesystem, self.filesystem_2]:
             out = destroy_filesystem(filesystem)
             if out.returncode:
                 self.assertIn('dataset does not exist', out.stderr)
@@ -125,10 +125,10 @@ class JobTests(unittest.TestCase):
         self.job.start()
 
         # When
-        self.job.restore(file_system=self.file_system_2)
+        self.job.restore(filesystem=self.filesystem_2)
 
         # Then
-        test_file = f'/{self.file_system_2}/test_file'
+        test_file = f'/{self.filesystem_2}/test_file'
         with open(test_file, 'r') as f:
             out = f.read()
         self.assertEqual(self.test_data, out)
