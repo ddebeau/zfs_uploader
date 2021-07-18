@@ -209,7 +209,7 @@ class ZFSjob:
                 self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_full.backup_time} '
                                   f's3_key={backup_full.s3_key} '
-                                  'msg="Snapshot already exists.')
+                                  'msg="Snapshot already exists."')
             else:
                 self._restore_snapshot(backup_full, filesystem)
 
@@ -435,10 +435,12 @@ class TransferCallback:
         self._transfer_0 = 0
         self._transfer_buffer = 0
         self._time_0 = time.time()
+        self._time_start = time.time()
 
     def callback(self, transfer):
         time_1 = time.time()
         time_diff = time_1 - self._time_0
+        time_elapsed = time_1 - self._time_start
 
         self._transfer_buffer += transfer
 
@@ -456,7 +458,7 @@ class TransferCallback:
                 f'speed="{round(speed / MB)} MBps" '
                 f'transferred="{round(transfer_1 / MB)}/'
                 f'{round(self._file_size / MB)} MB" '
-                f'time_elapsed={round(time_diff / 60)}m'
+                f'time_elapsed={round(time_elapsed / 60)}m'
             )
 
             self._transfer_0 = transfer_1
