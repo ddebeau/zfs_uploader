@@ -1,6 +1,7 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import os
 import sys
+from logging.handlers import RotatingFileHandler
 
 import click
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -31,6 +32,10 @@ def cli(ctx, config_path, log_path):
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+
+    if not os.path.isfile(config_path):
+        print('No configuration file found.')
+        sys.exit(1)
 
     ctx.obj = {
         'config_path': config_path,
