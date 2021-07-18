@@ -9,7 +9,7 @@ from apscheduler.schedulers.background import BlockingScheduler
 from zfs_uploader import __version__
 from zfs_uploader.config import Config
 
-LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+LOG_FORMAT = 'time=%(asctime)s.%(msecs)03d level=%(levelname)s %(message)s'
 
 
 @click.group()
@@ -23,7 +23,7 @@ LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 def cli(ctx, config_path, log_path):
     logger = logging.getLogger('zfs_uploader')
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(LOG_FORMAT)
+    formatter = logging.Formatter(LOG_FORMAT, datefmt='%Y-%m-%dT%H:%M:%S')
 
     fh = RotatingFileHandler(log_path, maxBytes=5*1024*1024, backupCount=5)
     fh.setFormatter(formatter)
