@@ -11,11 +11,11 @@ class BackupDB:
     """ Backup DB object. """
 
     @property
-    def file_system(self):
+    def filesystem(self):
         """ ZFS filesystem. """
-        return self._file_system
+        return self._filesystem
 
-    def __init__(self, bucket, file_system):
+    def __init__(self, bucket, filesystem):
         """ Create BackupDB object.
 
         BackupDB is used for storing Backup objects. It does not upload
@@ -25,14 +25,14 @@ class BackupDB:
         ----------
         bucket : Bucket
             S3 Bucket.
-        file_system : str
+        filesystem : str
             ZFS filesystem.
 
         """
-        self._file_system = file_system
+        self._filesystem = filesystem
         self._backups = {}
         self._s3_object = bucket.Object(
-            f'{self._file_system}/{BACKUP_DB_FILE}')
+            f'{self._filesystem}/{BACKUP_DB_FILE}')
 
         # initialize from backup.db file if it exists
         self.download()
@@ -63,7 +63,7 @@ class BackupDB:
             raise ValueError('Depending on backup does not exist.')
 
         self._backups.update({
-            backup_time: Backup(backup_time, backup_type, self._file_system,
+            backup_time: Backup(backup_time, backup_type, self._filesystem,
                                 s3_key, dependency, backup_size)
         })
 
@@ -196,14 +196,14 @@ class Backup:
         return self._backup_type
 
     @property
-    def file_system(self):
+    def filesystem(self):
         """ ZFS filesystem. """
-        return self._file_system
+        return self._filesystem
 
     @property
     def snapshot_name(self):
         """ ZFS snapshot name. """
-        return f'{self._file_system}@{self._backup_time}'
+        return f'{self._filesystem}@{self._backup_time}'
 
     @property
     def s3_key(self):
@@ -220,7 +220,7 @@ class Backup:
         """ Backup size in bytes. """
         return self._backup_size
 
-    def __init__(self, backup_time, backup_type, file_system, s3_key,
+    def __init__(self, backup_time, backup_type, filesystem, s3_key,
                  dependency=None, backup_size=None):
         """ Create Backup object.
 
@@ -249,7 +249,7 @@ class Backup:
         else:
             raise ValueError('backup_type must be `full` or `inc`')
 
-        self._file_system = file_system
+        self._filesystem = filesystem
         self._s3_key = s3_key
 
         if dependency:
@@ -262,7 +262,7 @@ class Backup:
     def __eq__(self, other):
         return all((self._backup_time == other._backup_time, # noqa
                     self._backup_type == other._backup_type, # noqa
-                    self._file_system == other._file_system, # noqa
+                    self._filesystem == other._filesystem, # noqa
                     self._s3_key == other._s3_key, # noqa
                     self._dependency == other._dependency, # noqa
                     self._backup_size == other._backup_size # noqa
@@ -271,7 +271,7 @@ class Backup:
     def __hash__(self):
         return hash((self._backup_time,
                      self._backup_type,
-                     self._file_system,
+                     self._filesystem,
                      self._s3_key,
                      self._dependency,
                      self._backup_size
@@ -284,7 +284,7 @@ def _json_default(obj):
             '_type': 'Backup',
             'backup_time': obj._backup_time, # noqa
             'backup_type': obj._backup_type, # noqa
-            'file_system': obj._file_system, # noqa
+            'filesystem': obj._filesystem, # noqa
             's3_key': obj._s3_key, # noqa
             'dependency': obj._dependency, # noqa
             'backup_size': obj._backup_size # noqa

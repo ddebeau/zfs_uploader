@@ -46,7 +46,7 @@ class Config:
                         v.get('bucket_name') or default.get('bucket_name'),
                         v.get('access_key') or default.get('access_key'),
                         v.get('secret_key') or default.get('secret_key'),
-                        file_system=k,
+                        filesystem=k,
                         region=v.get('region') or default.get('region'),
                         cron=cron_dict,
                         max_snapshots=(v.getint('max_snapshots') or

@@ -13,7 +13,7 @@ class SnapshotDBTests(unittest.TestCase):
 
         config = Config('config.cfg')
         self.job = next(iter(config.jobs.values()))
-        self.file_system = self.job.filesystem
+        self.filesystem = self.job.filesystem
 
         out = create_filesystem(self.job.filesystem)
         self.assertEqual(0, out.returncode, msg=out.stderr)
@@ -26,7 +26,7 @@ class SnapshotDBTests(unittest.TestCase):
     def test_create_snapshot(self):
         """ Test creating and storing a snapshot. """
         # Given
-        snapshot_db = SnapshotDB(self.file_system)
+        snapshot_db = SnapshotDB(self.filesystem)
 
         # When
         snapshot = snapshot_db.create_snapshot()
@@ -34,13 +34,13 @@ class SnapshotDBTests(unittest.TestCase):
         # Then
         self.assertIn(snapshot, snapshot_db.get_snapshots())
 
-        snapshot_db_new = SnapshotDB(self.file_system)
+        snapshot_db_new = SnapshotDB(self.filesystem)
         self.assertIn(snapshot, snapshot_db_new.get_snapshots())
 
     def test_create_multiple_snapshots(self):
         """ Test creating mulitple snapshots rapidly. """
         # Given
-        snapshot_db = SnapshotDB(self.file_system)
+        snapshot_db = SnapshotDB(self.filesystem)
 
         # When
         for _ in range(3):
@@ -53,7 +53,7 @@ class SnapshotDBTests(unittest.TestCase):
     def test_delete_snapshot(self):
         """ Test removing a snapshot. """
         # Given
-        snapshot_db = SnapshotDB(self.file_system)
+        snapshot_db = SnapshotDB(self.filesystem)
         snapshot = snapshot_db.create_snapshot()
 
         # When
@@ -62,5 +62,5 @@ class SnapshotDBTests(unittest.TestCase):
         # Then
         self.assertNotIn(snapshot, snapshot_db.get_snapshots())
 
-        snapshot_db_new = SnapshotDB(self.file_system)
+        snapshot_db_new = SnapshotDB(self.filesystem)
         self.assertNotIn(snapshot, snapshot_db_new.get_snapshots())
