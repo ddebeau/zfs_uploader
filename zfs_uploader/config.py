@@ -23,7 +23,7 @@ class Config:
 
         """
         self._logger = logging.getLogger(__name__)
-        self._logger.info('Loading configuration file.')
+        self._logger.info('msg="Loading configuration file."')
 
         file_path = file_path or 'config.cfg'
         if not os.path.isfile(file_path):

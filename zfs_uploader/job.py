@@ -134,7 +134,7 @@ class ZFSjob:
 
     def start(self):
         """ Start ZFS backup job. """
-        self._logger.info(f'[{self._filesystem}] Starting job.')
+        self._logger.info(f'filesystem={self._filesystem} msg="Starting job."')
 
         # find most recent full backup
         result = self._backup_db.get_backups(backup_type='full')
@@ -151,7 +151,7 @@ class ZFSjob:
         if self._max_incremental_backups:
             self._limit_incremental_backups()
 
-        self._logger.info(f'[{self._filesystem}] Finished job.')
+        self._logger.info(f'filesystem={self._filesystem} msg="Finished job."')
 
     def restore(self, backup_time=None, filesystem=None):
         """ Restore from backup.
@@ -193,7 +193,8 @@ class ZFSjob:
 
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f'[{s3_key}] Snapshot already exists.')
+                self._logger.info(f's3_key={s3_key} '
+                                  'msg="Snapshot already exists."')
             else:
                 self._restore_snapshot(backup, filesystem)
 
@@ -202,13 +203,14 @@ class ZFSjob:
             backup_full = self._backup_db.get_backup(backup.dependency)
 
             if backup_full.backup_time in snapshots and filesystem is None:
-                self._logger.info(f'[{backup_full.s3_key}] Snapshot already '
-                                  f'exists.')
+                self._logger.info(f's3_key={backup_full.s3_key} '
+                                  'msg="Snapshot already exists.')
             else:
                 self._restore_snapshot(backup_full, filesystem)
 
             if backup_time in snapshots and filesystem is None:
-                self._logger.info(f'[{s3_key}] Snapshot already exists.')
+                self._logger.info(f's3_key={s3_key} '
+                                  'msg="Snapshot already exists."')
             else:
                 self._restore_snapshot(backup, filesystem)
 
@@ -221,7 +223,7 @@ class ZFSjob:
         transfer_config = _get_transfer_config(filesystem, backup_time)
 
         s3_key = f'{self._filesystem}/{backup_time}.full'
-        self._logger.info(f'[{s3_key}] Starting full backup.')
+        self._logger.info(f's3_key={s3_key} msg="Starting full backup."')
 
         with open_snapshot_stream(self.filesystem, backup_time, 'r') as f:
             self._bucket.upload_fileobj(f.stdout,
@@ -237,7 +239,8 @@ class ZFSjob:
         backup_size = self._check_backup(s3_key)
         self._backup_db.create_backup(backup_time, 'full', s3_key,
                                       dependency=None, backup_size=backup_size)
-        self._logger.info(f'[{self._filesystem}] Finished full backup.')
+        self._logger.info(f'filesystem={self._filesystem}] '
+                          'msg="Finished full backup."')
 
     def _backup_incremental(self, backup_time_full):
         """ Create snapshot and upload incremental backup.
@@ -256,7 +259,8 @@ class ZFSjob:
                                                backup_time_full, backup_time)
 
         s3_key = f'{self._filesystem}/{backup_time}.inc'
-        self._logger.info(f'[{s3_key}] Starting incremental backup.')
+        self._logger.info(f's3_key={s3_key} '
+                          'msg="Starting incremental backup."')
 
         with open_snapshot_stream_inc(
                 self.filesystem, backup_time_full, backup_time) as f:
@@ -274,8 +278,8 @@ class ZFSjob:
         backup_size = self._check_backup(s3_key)
         self._backup_db.create_backup(backup_time, 'inc', s3_key,
                                       backup_time_full, backup_size)
-        self._logger.info(f'[{self._filesystem}] '
-                          'Finished incremental backup.')
+        self._logger.info(f'filesystem={self._filesystem} '
+                          'msg="Finished incremental backup."')
 
     def _restore_snapshot(self, backup, filesystem=None):
         """ Restore snapshot from backup.
@@ -294,7 +298,9 @@ class ZFSjob:
 
         transfer_config = TransferConfig(max_concurrency=S3_MAX_CONCURRENCY)
 
-        self._logger.info(f'[{filesystem}@{backup_time}] Restoring snapshot.')
+        self._logger.info(f'filesystem={filesystem} '
+                          f'snapshot_name={backup_time} '
+                          'msg="Restoring snapshot."')
         backup_object = self._s3.Object(self._bucket_name, s3_key)
 
         with open_snapshot_stream(filesystem, backup_time, 'w') as f:
@@ -320,15 +326,17 @@ class ZFSjob:
         results = self._snapshot_db.get_snapshots()
 
         if len(results) > self._max_snapshots:
-            self._logger.info(f'[{self._filesystem}] '
-                              'Snapshot limit achieved.')
+            self._logger.info(f'filesystem={self._filesystem} '
+                              'msg="Snapshot limit achieved."')
 
         while len(results) > self._max_snapshots:
             snapshot = results.pop(0)
             backup_time = snapshot.name
 
             if backup_time not in backup_times_full:
-                self._logger.info(f'[{snapshot.key}] Deleting snapshot.')
+                self._logger.info(f'filesystem={self._filesystem} '
+                                  f'snapshot_name={snapshot.name} '
+                                  'msg="Deleting snapshot."')
                 self._snapshot_db.delete_snapshot(snapshot.name)
 
     def _check_backup(self, s3_key):
@@ -362,7 +370,8 @@ class ZFSjob:
         backup_time = backup.backup_time
         s3_key = backup.s3_key
 
-        self._logger.info(f'[{s3_key}] Deleting backup.')
+        self._logger.info(f's3_key={s3_key} '
+                          'msg="Deleting backup."')
         backup_object = self._s3.Object(self._bucket_name, s3_key)
         backup_object.delete()
         self._backup_db.delete_backup(backup_time)
@@ -373,8 +382,8 @@ class ZFSjob:
 
         if backups_inc:
             if len(backups_inc) > self._max_incremental_backups:
-                self._logger.info(f'[{self._filesystem}] Incremental backup '
-                                  f'limit achieved.')
+                self._logger.info(f'filesystem={self._filesystem}] '
+                                  'msg="Incremental backup limit achieved."')
 
             while len(backups_inc) > self._max_incremental_backups:
                 backup = backups_inc.pop(0)
