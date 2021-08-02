@@ -50,7 +50,8 @@ class Config:
                     self._logger.critical(f'file_path={file_path} '
                                           f'filesystem={filesystem}'
                                           'msg="bucket_name, access_key or '
-                                          'secret_key is missing from config.')
+                                          'secret_key is missing from config."'
+                                          )
                     sys.exit(1)
 
                 cron_dict = None
