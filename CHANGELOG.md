@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add project documentation to README
 
+- Send all snapshots in raw mode. Encryption is maintained for encrypted 
+  filesystems and unencrypted filesystems are sent with compression (if 
+  required features are enabled).
+[#46](https://github.com/ddebeau/zfs_uploader/issues/46)
+
 ## [0.4.2](https://github.com/ddebeau/zfs_uploader/compare/0.4.1...0.4.2) 2021-07-18
 
 ### Fixed
