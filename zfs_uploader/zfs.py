@@ -70,7 +70,7 @@ def get_snapshot_send_size_inc(filesystem, snapshot_name_1, snapshot_name_2):
 def open_snapshot_stream(filesystem, snapshot_name, mode):
     """ Open snapshot stream. """
     if mode == 'r':
-        cmd = ['zfs', 'send', f'{filesystem}@{snapshot_name}']
+        cmd = ['zfs', 'send', '-w', f'{filesystem}@{snapshot_name}']
         return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
     elif mode == 'w':
