@@ -160,12 +160,12 @@ class ZFSjob:
                                'than or equal to 0."')
             sys.exit(1)
 
-        if max_incremental_backups_per_full and max_incremental_backups_per_full >= 0:
-            self._max_incremental_backups_per_full = max_incremental_backups_per_full
+        if max_incremental_backups_per_full and max_incremental_backups_per_full >= 0: # noqa
+            self._max_incremental_backups_per_full = max_incremental_backups_per_full # noqa
         else:
             self._logger.error(f'filesystem={self._filesystem} '
-                               'msg="max_incremental_backups_per_full must be greater '
-                               'than or equal to 0."')
+                               'msg="max_incremental_backups_per_full must be '
+                               'greater than or equal to 0."')
             sys.exit(1)
 
         if max_full_backups and max_full_backups >= 1:
@@ -189,7 +189,7 @@ class ZFSjob:
         if backup and len(backups_inc) > 0:
             backup_time = backup.backup_time
 
-            if self._max_incremental_backups_per_full or self._max_incremental_backups_per_full == 0:
+            if self._max_incremental_backups_per_full or self._max_incremental_backups_per_full == 0: # noqa
                 dependants = [True if b.dependency == backup_time
                               else False for b in backups_inc]
 

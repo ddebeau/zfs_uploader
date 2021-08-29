@@ -74,7 +74,7 @@ class Config:
                                 default.getint('max_incremental_backups')),
                         max_incremental_backups_per_full=(
                                 v.getint('max_incremental_backups_per_full') or
-                                default.getint('max_incremental_backups_per_full')),
+                                default.getint('max_incremental_backups_per_full')), # noqa
                         max_full_backups=(
                                 v.getint('max_full_backups') or
                                 default.getint('max_full_backups')),
