@@ -62,6 +62,38 @@ class JobTests(unittest.TestCase):
         self.assertEqual(1, len(backups))
         self.assertEqual(backup_type, backups[0].backup_type)
 
+    def test_start_multiple_full(self):
+        """ Test job start with multiple full backups. """
+        # Given
+        self.job._max_incremental_backups_per_full = 1
+
+        # When
+        for _ in range(4):
+            self.job.start()
+
+        # Then
+        backups_full = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(2, len(backups_full))
+
+        backups_inc = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(2, len(backups_inc))
+
+    def test_start_only_full(self):
+        """ Test job start with only full backups. """
+        # Given
+        self.job._max_incremental_backups_per_full = 0
+
+        # When
+        for _ in range(3):
+            self.job.start()
+
+        # Then
+        backups_full = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(3, len(backups_full))
+
+        backups_inc = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(0, len(backups_inc))
+
     def test_restore_from_full_backup(self):
         """ Test restore from full backup. """
         # Given
