@@ -123,6 +123,10 @@ class ZFSjob:
             Maximum number of snapshots.
         max_incremental_backups : int, optional
             Maximum number of incremental backups.
+        max_incremental_backups_per_full : int, optional
+            Maximum number of incremental backups per full backup.
+        max_full_backups : int, optional
+            Maximum number of full backups.
         storage_class : str, default: STANDARD
             S3 storage class.
 
