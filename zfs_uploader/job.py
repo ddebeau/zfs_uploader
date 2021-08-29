@@ -141,39 +141,35 @@ class ZFSjob:
         self._backup_db = BackupDB(self._bucket, self._filesystem)
         self._snapshot_db = SnapshotDB(self._filesystem)
         self._cron = cron
+        self._max_snapshots = max_snapshots
+        self._max_incremental_backups = max_incremental_backups
+        self._max_incremental_backups_per_full = max_incremental_backups_per_full # noqa
+        self._max_full_backups = max_full_backups
         self._storage_class = storage_class or 'STANDARD'
         self._logger = logging.getLogger(__name__)
 
-        if max_snapshots and max_snapshots >= 0:
-            self._max_snapshots = max_snapshots
-        else:
+        if max_snapshots and not max_snapshots >= 0:
             self._logger.error(f'filesystem={self._filesystem} '
                                'msg="max_snapshots must be greater than or '
                                'equal to 0."')
             sys.exit(1)
 
-        if max_incremental_backups and max_incremental_backups >= 0:
-            self._max_incremental_backups = max_incremental_backups
-        else:
+        if max_incremental_backups and not max_incremental_backups >= 0:
             self._logger.error(f'filesystem={self._filesystem} '
                                'msg="max_incremental_backups must be greater '
                                'than or equal to 0."')
             sys.exit(1)
 
-        if max_incremental_backups_per_full and max_incremental_backups_per_full >= 0: # noqa
-            self._max_incremental_backups_per_full = max_incremental_backups_per_full # noqa
-        else:
+        if max_incremental_backups_per_full and not max_incremental_backups_per_full >= 0: # noqa
             self._logger.error(f'filesystem={self._filesystem} '
                                'msg="max_incremental_backups_per_full must be '
                                'greater than or equal to 0."')
             sys.exit(1)
 
-        if max_full_backups and max_full_backups >= 1:
-            self._max_full_backups = max_full_backups
-        else:
+        if max_full_backups and not max_full_backups >= 1:
             self._logger.error(f'filesystem={self._filesystem} '
-                               'msg="max_full_backups must be greater than or '
-                               'equal to 1."')
+                               'msg="max_full_backups must be greater than '
+                               'or equal to 1."')
             sys.exit(1)
 
     def start(self):
