@@ -72,6 +72,12 @@ class Config:
                         max_incremental_backups=(
                                 v.getint('max_incremental_backups') or
                                 default.getint('max_incremental_backups')),
+                        max_incremental_backups_per_full=(
+                                v.getint('max_incremental_backups_per_full') or
+                                default.getint('max_incremental_backups_per_full')),
+                        max_full_backups=(
+                                v.getint('max_full_backups') or
+                                default.getint('max_full_backups')),
                         storage_class=(v.get('storage_class') or
                                        default.get('storage_class'))
                     )
