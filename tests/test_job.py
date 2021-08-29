@@ -156,11 +156,10 @@ class JobTests(unittest.TestCase):
         # Check if full backup snapshot exists.
         self.assertEqual(snapshots[0], snapshots_new[0])
 
-    def test_limit_backups(self):
+    def test_limit_inc_backups(self):
         """ Test the incremental backup limiter. """
 
         # Given
-        self.job._max_snapshots = None
         self.job._max_incremental_backups = 4
 
         for _ in range(5):
@@ -177,9 +176,43 @@ class JobTests(unittest.TestCase):
         self.job._limit_incremental_backups()
 
         # Then
-        backups_inc_new = self.job._backup_db.get_backups(
-            backup_type='inc')
+        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
         self.assertEqual(2, len(backups_inc_new))
 
         # The two most recent incremental backups should exist.
         self.assertEqual(backups_inc[-2:], backups_inc_new)
+
+    def test_limit_full_backups(self):
+        """ Test the full backup limiter. """
+
+        # Given
+        self.job._max_incremental_backups_per_full = 1
+        self.job._max_full_backups = 3
+
+        for _ in range(6):
+            self.job.start()
+
+        backups_full = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(3, len(backups_full))
+
+        backups_inc = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(3, len(backups_inc))
+
+        # When
+        self.job._max_full_backups = 1
+        self.job._limit_full_backups()
+
+        # Then
+        # No full backups should be removed because they all have dependents
+        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(backups_full, backups_full_new)
+
+        # When
+        self.job._delete_backup(backups_inc[0])
+        self.job._limit_full_backups()
+
+        # Then
+        # Oldest full backup should be removed
+        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(2, len(backups_full_new))
+        self.assertEqual(backups_full[1:], backups_full_new)

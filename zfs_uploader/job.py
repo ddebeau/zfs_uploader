@@ -193,7 +193,7 @@ class ZFSjob:
                 dependants = [True if b.dependency == backup_time
                               else False for b in backups_inc]
 
-                if sum(dependants) > self._max_incremental_backups_per_full:
+                if sum(dependants) >= self._max_incremental_backups_per_full:
                     self._backup_full()
                 else:
                     self._backup_incremental(backup_time)
