@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Add `max_incremental_backups_per_full` config option. Setting the option 
+  allows for multiple full backups. Do not set option for one full backup 
+  and one or more incremental backups.
+[#29](https://github.com/ddebeau/zfs_uploader/issues/29)
+
+- Replace `max_incremental_backups` config option with `max_backups`, to 
+  avoid having to set a limit for incremental and full backups. Full 
+  backups are only removed when there are no dependent incremental backups.
+  
+### Fixed
+
+- Remove `misfire_grace_time` so that jobs always run if they are late.
+[#49](https://github.com/ddebeau/zfs_uploader/issues/49)
+
 ## [0.5.0](https://github.com/ddebeau/zfs_uploader/compare/0.4.2...0.5.0) 2021-08-02
 
 ### Added

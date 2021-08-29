@@ -3,12 +3,12 @@ Work in progress. Use at your own risk!
 
 ZFS Uploader is a simple program for backing up ZFS full and incremental 
 snapshots to Amazon S3. It supports CRON based scheduling and pruning of 
-incremental snapshots.
+old backups.
 
 ### Features
 - Backup/restore ZFS file systems
 - Create incremental and full backups
-- Prune incremental backups
+- Prune incremental and full backups
 - Prune snapshots
 - Use any S3 storage class type
 
