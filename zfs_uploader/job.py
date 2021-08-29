@@ -69,19 +69,14 @@ class ZFSjob:
         return self._max_snapshots
 
     @property
-    def max_incremental_backups(self):
-        """ Maximum number of incremental backups. """
-        return self._max_incremental_backups
+    def max_backups(self):
+        """ Maximum number of full and incremental backups. """
+        return self._max_backups
 
     @property
     def max_incremental_backups_per_full(self):
         """ Maximum number of incremental backups per full backup. """
         return self._max_incremental_backups_per_full
-
-    @property
-    def max_full_backups(self):
-        """ Maximum number of full backups. """
-        return self._max_full_backups
 
     @property
     def storage_class(self):
@@ -99,10 +94,8 @@ class ZFSjob:
         return self._snapshot_db
 
     def __init__(self, bucket_name, access_key, secret_key, filesystem,
-                 region=None, cron=None, max_snapshots=None,
-                 max_incremental_backups=None,
-                 max_incremental_backups_per_full=None,
-                 max_full_backups=None,  storage_class=None):
+                 region=None, cron=None, max_snapshots=None, max_backups=None,
+                 max_incremental_backups_per_full=None, storage_class=None):
         """ Create ZFSjob object.
 
         Parameters
@@ -121,12 +114,10 @@ class ZFSjob:
             Cron schedule. Example: `* 0 * * *`
         max_snapshots : int, optional
             Maximum number of snapshots.
-        max_incremental_backups : int, optional
-            Maximum number of incremental backups.
+        max_backups : int, optional
+            Maximum number of full and incremental backups.
         max_incremental_backups_per_full : int, optional
             Maximum number of incremental backups per full backup.
-        max_full_backups : int, optional
-            Maximum number of full backups.
         storage_class : str, default: STANDARD
             S3 storage class.
 
@@ -146,9 +137,8 @@ class ZFSjob:
         self._snapshot_db = SnapshotDB(self._filesystem)
         self._cron = cron
         self._max_snapshots = max_snapshots
-        self._max_incremental_backups = max_incremental_backups
+        self._max_backups = max_backups
         self._max_incremental_backups_per_full = max_incremental_backups_per_full # noqa
-        self._max_full_backups = max_full_backups
         self._storage_class = storage_class or 'STANDARD'
         self._logger = logging.getLogger(__name__)
 
@@ -158,22 +148,16 @@ class ZFSjob:
                                'equal to 0."')
             sys.exit(1)
 
-        if max_incremental_backups and not max_incremental_backups >= 0:
+        if max_backups and not max_backups >= 1:
             self._logger.error(f'filesystem={self._filesystem} '
-                               'msg="max_incremental_backups must be greater '
-                               'than or equal to 0."')
+                               'msg="max_backups must be greater '
+                               'than or equal to 1."')
             sys.exit(1)
 
         if max_incremental_backups_per_full and not max_incremental_backups_per_full >= 0: # noqa
             self._logger.error(f'filesystem={self._filesystem} '
                                'msg="max_incremental_backups_per_full must be '
                                'greater than or equal to 0."')
-            sys.exit(1)
-
-        if max_full_backups and not max_full_backups >= 1:
-            self._logger.error(f'filesystem={self._filesystem} '
-                               'msg="max_full_backups must be greater than '
-                               'or equal to 1."')
             sys.exit(1)
 
     def start(self):
@@ -185,35 +169,34 @@ class ZFSjob:
         # find most recent full backup
         backup = backups_full[-1] if backups_full else None
 
-        # if full backup exists and there are incremental backups
-        if backup and len(backups_inc) > 0:
+        # if no full backup exists
+        if backup is None:
+            self._backup_full()
+
+        # if we don't want incremental backups
+        elif self._max_incremental_backups_per_full == 0:
+            self._backup_full()
+
+        # if we want incremental backups and multiple full backups
+        elif self._max_incremental_backups_per_full:
             backup_time = backup.backup_time
 
-            if self._max_incremental_backups_per_full or self._max_incremental_backups_per_full == 0: # noqa
-                dependants = [True if b.dependency == backup_time
-                              else False for b in backups_inc]
+            dependants = [True if b.dependency == backup_time
+                          else False for b in backups_inc]
 
-                if sum(dependants) >= self._max_incremental_backups_per_full:
-                    self._backup_full()
-                else:
-                    self._backup_incremental(backup_time)
+            if sum(dependants) >= self._max_incremental_backups_per_full:
+                self._backup_full()
             else:
                 self._backup_incremental(backup_time)
 
-        # if full backup exists and there are no incremental backups
-        elif backup and len(backups_inc) == 0:
+        # if we want incremental backups and not multiple full backups
+        else:
             self._backup_incremental(backup.backup_time)
-
-        # if no full backup exists
-        elif backup is None:
-            self._backup_full()
 
         if self._max_snapshots or self._max_snapshots == 0:
             self._limit_snapshots()
-        if self._max_incremental_backups or self._max_incremental_backups == 0:
-            self._limit_incremental_backups()
-        if self._max_full_backups or self._max_full_backups == 0:
-            self._limit_full_backups()
+        if self._max_backups or self._max_backups == 0:
+            self._limit_backups()
 
         self._logger.info(f'filesystem={self._filesystem} msg="Finished job."')
 
@@ -473,45 +456,40 @@ class ZFSjob:
         backup_object.delete()
         self._backup_db.delete_backup(backup_time)
 
-    def _limit_incremental_backups(self):
-        """ Limit number of incremental backups. """
-        backups_inc = self._backup_db.get_backups(backup_type='inc')
-
-        if backups_inc:
-            if len(backups_inc) > self._max_incremental_backups:
-                self._logger.info(f'filesystem={self._filesystem} '
-                                  'msg="Incremental backup limit achieved."')
-
-            while len(backups_inc) > self._max_incremental_backups:
-                backup = backups_inc.pop(0)
-                self._delete_backup(backup)
-
-    def _limit_full_backups(self):
-        """ Limit number of full backups.
+    def _limit_backups(self):
+        """ Limit number of incremental and full backups.
 
         Only backups with no dependants are removed.
         """
-        backups_inc = self._backup_db.get_backups(backup_type='inc')
-        backups_full = self._backup_db.get_backups(backup_type='full')
+        backups = self._backup_db.get_backups()
 
-        if backups_full:
-            if len(backups_full) > self._max_full_backups:
-                self._logger.info(f'filesystem={self._filesystem} '
-                                  'msg="Full backup limit achieved."')
+        if len(backups) > self._max_backups:
+            self._logger.info(f'filesystem={self._filesystem} '
+                              'msg="Backup limit achieved."')
 
-            while len(backups_full) > self._max_full_backups:
-                backup = backups_full.pop(0)
-                backup_time = backup.backup_time
-                s3_key = backup.s3_key
+        count = 0
+        while len(backups) > self._max_backups:
+            backup = backups[count]
+            backup_time = backup.backup_time
+            backup_type = backup.backup_type
+            s3_key = backup.s3_key
 
+            if backup_type == "inc":
+                self._delete_backup(backup)
+                backups.pop(count)
+
+            elif backup_type == "full":
                 dependants = any([True if b.dependency == backup_time
-                                  else False for b in backups_inc])
+                                  else False for b in backups])
                 if dependants:
                     self._logger.info(f's3_key={s3_key} '
                                       'msg="Backup has dependants. Not '
                                       'deleting."')
                 else:
                     self._delete_backup(backup)
+                    backups.pop(count)
+
+            count += 1
 
 
 class TransferCallback:
