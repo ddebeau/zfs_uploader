@@ -1,5 +1,6 @@
 import logging
 import time
+import sys
 
 import boto3
 from boto3.s3.transfer import TransferConfig
@@ -140,12 +141,40 @@ class ZFSjob:
         self._backup_db = BackupDB(self._bucket, self._filesystem)
         self._snapshot_db = SnapshotDB(self._filesystem)
         self._cron = cron
-        self._max_snapshots = max_snapshots
-        self._max_incremental_backups = max_incremental_backups
-        self._max_incremental_backups_per_full = max_incremental_backups_per_full
-        self._max_full_backups = max_full_backups
         self._storage_class = storage_class or 'STANDARD'
         self._logger = logging.getLogger(__name__)
+
+        if max_snapshots and max_snapshots >= 0:
+            self._max_snapshots = max_snapshots
+        else:
+            self._logger.error(f'filesystem={self._filesystem} '
+                               'msg="max_snapshots must be greater than or '
+                               'equal to 0."')
+            sys.exit(1)
+
+        if max_incremental_backups and max_incremental_backups >= 0:
+            self._max_incremental_backups = max_incremental_backups
+        else:
+            self._logger.error(f'filesystem={self._filesystem} '
+                               'msg="max_incremental_backups must be greater '
+                               'than or equal to 0."')
+            sys.exit(1)
+
+        if max_incremental_backups_per_full and max_incremental_backups_per_full >= 0:
+            self._max_incremental_backups_per_full = max_incremental_backups_per_full
+        else:
+            self._logger.error(f'filesystem={self._filesystem} '
+                               'msg="max_incremental_backups_per_full must be greater '
+                               'than or equal to 0."')
+            sys.exit(1)
+
+        if max_full_backups and max_full_backups >= 1:
+            self._max_full_backups = max_full_backups
+        else:
+            self._logger.error(f'filesystem={self._filesystem} '
+                               'msg="max_full_backups must be greater than or '
+                               'equal to 1."')
+            sys.exit(1)
 
     def start(self):
         """ Start ZFS backup job. """
@@ -159,11 +188,15 @@ class ZFSjob:
         # if full backup exists and there are incremental backups
         if backup and len(backups_inc) > 0:
             backup_time = backup.backup_time
-            dependants = [True if b.dependency == backup_time
-                          else False for b in backups_inc]
 
-            if sum(dependants) > self._max_incremental_backups_per_full:
-                self._backup_full()
+            if self._max_incremental_backups_per_full or self._max_incremental_backups_per_full == 0:
+                dependants = [True if b.dependency == backup_time
+                              else False for b in backups_inc]
+
+                if sum(dependants) > self._max_incremental_backups_per_full:
+                    self._backup_full()
+                else:
+                    self._backup_incremental(backup_time)
             else:
                 self._backup_incremental(backup_time)
 
@@ -175,11 +208,11 @@ class ZFSjob:
         elif backup is None:
             self._backup_full()
 
-        if self._max_snapshots:
+        if self._max_snapshots or self._max_snapshots == 0:
             self._limit_snapshots()
-        if self._max_incremental_backups:
+        if self._max_incremental_backups or self._max_incremental_backups == 0:
             self._limit_incremental_backups()
-        if self._max_full_backups:
+        if self._max_full_backups or self._max_full_backups == 0:
             self._limit_full_backups()
 
         self._logger.info(f'filesystem={self._filesystem} msg="Finished job."')
