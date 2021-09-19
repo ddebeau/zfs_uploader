@@ -93,7 +93,7 @@ Filesystem is backed up at 02:00 daily. Only the most recent 7 snapshots
 are kept. The oldest backup without dependents is removed once there are
 more than 7 backups.
 
-#### Structure
+##### Structure
 full backup (f)
 incremental backup (i)
 
@@ -132,7 +132,7 @@ Filesystem is backed up at 02:00 daily. Only the most recent 7 snapshots
 are kept. The oldest incremental backup is removed once there are
 more than 7 backups. The full backup is never removed.
 
-#### Structure
+##### Structure
 full backup (f)
 incremental backup (i)
 
