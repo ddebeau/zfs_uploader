@@ -1,13 +1,15 @@
 # ZFS Uploader
-ZFS Uploader is a simple program for backing up full and incremental 
-ZFS snapshots to Amazon S3. It supports CRON based scheduling and can 
-automatically remove old snapshots and backups.
+ZFS Uploader is a simple program for backing up full and incremental ZFS 
+snapshots to Amazon S3. It supports CRON based scheduling and can 
+automatically remove old snapshots and backups. A helpful CLI (`zfsup`) lets 
+you run jobs, restore, and list backups.
 
 ### Features
 - Backup/restore ZFS file systems
 - Create incremental and full backups
 - Automatically remove old snapshots and backups
 - Use any S3 storage class type
+- Helpful CLI
 
 ### Requirements
 - Python 3.6 or higher
@@ -43,6 +45,11 @@ chmod 600 config.cfg
 ```bash
 cp zfs_uploader.service /etc/systemd/system/zfs_uploader.service
 sudo systemctl enable --now zfs_uploader
+```
+
+5. List backups
+```bash
+zfsup list
 ```
 
 ## Configuration File
