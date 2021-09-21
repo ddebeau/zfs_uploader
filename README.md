@@ -94,8 +94,7 @@ are kept. The oldest backup without dependents is removed once there are
 more than 7 backups.
 
 ##### Structure
-full backup (f)
-incremental backup (i)
+full backup (f), incremental backup (i)
 
 1.  f
 2.  f i
@@ -124,7 +123,6 @@ storage_class = STANDARD
 [pool/filesystem]
 cron = 0 2 * * *
 max_snapshots = 7
-max_incremental_backups_per_full = 6
 max_backups = 7
 ```
 
@@ -133,8 +131,7 @@ are kept. The oldest incremental backup is removed once there are
 more than 7 backups. The full backup is never removed.
 
 ##### Structure
-full backup (f)
-incremental backup (i)
+full backup (f), incremental backup (i)
 
 1.  f
 2.  f i
