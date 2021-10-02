@@ -148,6 +148,37 @@ full backup (f), incremental backup (i)
 6.  f i i i i i
 7.  f i i i i i i
 
+#### Only full backups
+```ini
+[DEFAULT]
+bucket_name = BUCKET_NAME
+region = us-east-1
+access_key = ACCESS_KEY
+secret_key = SECRET_KEY
+storage_class = STANDARD
+
+[pool/filesystem]
+cron = 0 2 * * *
+max_snapshots = 7
+max_incremental_backups_per_full = 0
+max_backups = 7
+```
+
+Filesystem is backed up at 02:00 daily. Only the most recent 7 snapshots
+are kept. The oldest full backup is removed once there are
+more than 7 backups. No incremental backups are taken.
+
+##### Structure
+full backup (f)
+
+1.  f
+2.  f f
+3.  f f f
+4.  f f f f
+5.  f f f f f
+6.  f f f f f f
+7.  f f f f f f f
+
 ## Miscellaneous
 ### Storage class codes
 - STANDARD
