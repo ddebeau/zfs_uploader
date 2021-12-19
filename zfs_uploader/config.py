@@ -66,6 +66,7 @@ class Config:
                         secret_key,
                         filesystem,
                         region=v.get('region') or default.get('region'),
+                        endpoint=v.get('endpoint') or default.get('endpoint'),
                         cron=cron_dict,
                         max_snapshots=(v.getint('max_snapshots') or
                                        default.getint('max_snapshots')),
