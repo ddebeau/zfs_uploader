@@ -69,7 +69,7 @@ jobs can be set in one file.
 #### region : str, default: us-east-1
    S3 region.
 #### endpoint : str, optional
-   S3 endpoint - for S3 compatible services
+   S3 endpoint for alternative services
 #### cron : str, optional
    Cron schedule. Example: `* 0 * * *`
 #### max_snapshots : int, optional
