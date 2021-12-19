@@ -68,7 +68,7 @@ jobs can be set in one file.
    ZFS filesystem.
 #### region : str, default: us-east-1
    S3 region.
-#### endpoint : str
+#### endpoint : str, optional
    S3 endpoint - for S3 compatible services
 #### cron : str, optional
    Cron schedule. Example: `* 0 * * *`
