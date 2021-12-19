@@ -39,6 +39,11 @@ class ZFSjob:
         return self._region
 
     @property
+    def endpoint(self):
+        """ S3 Endpoint. """
+        return self._endpoint
+
+    @property
     def access_key(self):
         """ S3 access key. """
         return self._access_key
@@ -111,6 +116,8 @@ class ZFSjob:
             ZFS filesystem.
         region : str, default: us-east-1
             S3 region.
+        endpoint : str, optional
+            S3 endpoint for alternative services
         cron : str, optional
             Cron schedule. Example: `* 0 * * *`
         max_snapshots : int, optional
@@ -121,7 +128,6 @@ class ZFSjob:
             Maximum number of incremental backups per full backup.
         storage_class : str, default: STANDARD
             S3 storage class.
-        endpoint : str
 
         """
         self._bucket_name = bucket_name
