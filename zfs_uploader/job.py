@@ -39,6 +39,11 @@ class ZFSjob:
         return self._region
 
     @property
+    def endpoint(self):
+        """ S3 Endpoint. """
+        return self._endpoint
+
+    @property
     def access_key(self):
         """ S3 access key. """
         return self._access_key
@@ -95,7 +100,8 @@ class ZFSjob:
 
     def __init__(self, bucket_name, access_key, secret_key, filesystem,
                  region=None, cron=None, max_snapshots=None, max_backups=None,
-                 max_incremental_backups_per_full=None, storage_class=None):
+                 max_incremental_backups_per_full=None, storage_class=None,
+                 endpoint=None):
         """ Create ZFSjob object.
 
         Parameters
@@ -110,6 +116,8 @@ class ZFSjob:
             ZFS filesystem.
         region : str, default: us-east-1
             S3 region.
+        endpoint : str, optional
+            S3 endpoint for alternative services
         cron : str, optional
             Cron schedule. Example: `* 0 * * *`
         max_snapshots : int, optional
@@ -127,11 +135,13 @@ class ZFSjob:
         self._access_key = access_key
         self._secret_key = secret_key
         self._filesystem = filesystem
+        self._endpoint = endpoint
 
         self._s3 = boto3.resource(service_name='s3',
                                   region_name=self._region,
                                   aws_access_key_id=self._access_key,
-                                  aws_secret_access_key=self._secret_key)
+                                  aws_secret_access_key=self._secret_key,
+                                  endpoint_url=endpoint)
         self._bucket = self._s3.Bucket(self._bucket_name)
         self._backup_db = BackupDB(self._bucket, self._filesystem)
         self._snapshot_db = SnapshotDB(self._filesystem)

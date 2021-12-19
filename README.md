@@ -68,6 +68,8 @@ jobs can be set in one file.
    ZFS filesystem.
 #### region : str, default: us-east-1
    S3 region.
+#### endpoint : str, optional
+   S3 endpoint for alternative services
 #### cron : str, optional
    Cron schedule. Example: `* 0 * * *`
 #### max_snapshots : int, optional
@@ -99,6 +101,23 @@ max_backups = 7
 Filesystem is backed up at 02:00 daily. Only the most recent 7 snapshots
 are kept. The oldest backup without dependents is removed once there are
 more than 7 backups.
+
+#### Backblaze B2 S3-compatible endpoint, full backups
+```ini
+[DEFAULT]
+bucket_name = BUCKET_NAME
+region = eu-central-003
+access_key = ACCESS_KEY
+secret_key = SECRET_KEY
+storage_class = STANDARD
+endpoint = https://s3.eu-central-003.backblazeb2.com
+
+[pool/filesystem]
+cron = 0 2 * * *
+max_snapshots = 7
+max_incremental_backups_per_full = 6
+max_backups = 7
+```
 
 ##### Structure
 full backup (f), incremental backup (i)
