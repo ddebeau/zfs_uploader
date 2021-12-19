@@ -18,3 +18,4 @@ config['test-pool/test-filesystem'] = {
 
 with open('config.cfg', 'w') as f:
     config.write(f)
+
