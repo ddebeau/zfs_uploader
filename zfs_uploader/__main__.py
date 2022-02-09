@@ -52,7 +52,8 @@ def backup(ctx):
 
     config = Config(config_path)
     scheduler = BlockingScheduler(
-        executors={'default': ThreadPoolExecutor(max_workers=1)}
+        executors={'default': ThreadPoolExecutor(max_workers=1)},
+        job_defaults={'misfire_grace_time': None}
     )
 
     for job in config.jobs.values():
