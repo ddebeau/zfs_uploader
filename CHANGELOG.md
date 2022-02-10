@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fix bug where incremental snapshot streams were not being sent in raw mode
+[#58](https://github.com/ddebeau/zfs_uploader/pull/58)
+
 ## [0.7.1](https://github.com/ddebeau/zfs_uploader/compare/0.7.0...0.7.1) 2022-02-08
 
 ### Fixed
