@@ -80,6 +80,8 @@ jobs can be set in one file.
    Maximum number of incremental backups per full backup.
 #### storage_class : str, default: STANDARD
    S3 storage class.
+#### max_multipart_parts : int, default: 10000
+   Maximum number of parts to use in a multipart S3 upload.
 
 ### Examples
 #### Multiple full backups
@@ -111,6 +113,24 @@ access_key = ACCESS_KEY
 secret_key = SECRET_KEY
 storage_class = STANDARD
 endpoint = https://s3.eu-central-003.backblazeb2.com
+
+[pool/filesystem]
+cron = 0 2 * * *
+max_snapshots = 7
+max_incremental_backups_per_full = 6
+max_backups = 7
+```
+
+#### Scaleway S3-compatible Object Storage, full backups
+```ini
+[DEFAULT]
+bucket_name = BUCKET_NAME
+region = fr-par
+access_key = ACCESS_KEY
+secret_key = SECRET_KEY
+storage_class = STANDARD
+endpoint = https://s3.fr-par.scw.cloud
+max_multipart_parts = 1000
 
 [pool/filesystem]
 cron = 0 2 * * *
