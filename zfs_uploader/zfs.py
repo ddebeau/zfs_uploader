@@ -53,14 +53,14 @@ def destroy_filesystem(filesystem):
 
 
 def get_snapshot_send_size(filesystem, snapshot_name):
-    cmd = ['zfs', 'send', '--parsable', '--dryrun',
+    cmd = ['zfs', 'send', '--raw', '--parsable', '--dryrun',
            f'{filesystem}@{snapshot_name}']
     out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
     return out.stdout.splitlines()[1].split()[1]
 
 
 def get_snapshot_send_size_inc(filesystem, snapshot_name_1, snapshot_name_2):
-    cmd = ['zfs', 'send', '--parsable', '--dryrun', '-i',
+    cmd = ['zfs', 'send', '--raw', '--parsable', '--dryrun', '-i',
            f'{filesystem}@{snapshot_name_1}',
            f'{filesystem}@{snapshot_name_2}']
     out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
@@ -70,7 +70,7 @@ def get_snapshot_send_size_inc(filesystem, snapshot_name_1, snapshot_name_2):
 def open_snapshot_stream(filesystem, snapshot_name, mode):
     """ Open snapshot stream. """
     if mode == 'r':
-        cmd = ['zfs', 'send', '-w', f'{filesystem}@{snapshot_name}']
+        cmd = ['zfs', 'send', '--raw', f'{filesystem}@{snapshot_name}']
         return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
     elif mode == 'w':
@@ -84,7 +84,7 @@ def open_snapshot_stream(filesystem, snapshot_name, mode):
 
 def open_snapshot_stream_inc(filesystem, snapshot_name_1, snapshot_name_2):
     """ Open incremental snapshot read stream. """
-    cmd = ['zfs', 'send', '-w', '-i', f'{filesystem}@{snapshot_name_1}',
+    cmd = ['zfs', 'send', '--raw', '-i', f'{filesystem}@{snapshot_name_1}',
            f'{filesystem}@{snapshot_name_2}']
     return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
