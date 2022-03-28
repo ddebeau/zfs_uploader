@@ -80,6 +80,8 @@ jobs can be set in one file.
    Maximum number of incremental backups per full backup.
 #### storage_class : str, default: STANDARD
    S3 storage class.
+#### max_multipart_parts : int, default: 10000
+   Maximum number of parts to use in a multipart S3 upload.
 
 ### Examples
 #### Multiple full backups
