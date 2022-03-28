@@ -78,8 +78,9 @@ class Config:
                                 default.getint('max_incremental_backups_per_full')), # noqa
                         storage_class=(v.get('storage_class') or
                                        default.get('storage_class')),
-                        max_multipart_parts=(v.getint('max_multipart_parts') or 
-                                        default.getint('max_multipart_parts'))
+                        max_multipart_parts=(
+                                v.getint('max_multipart_parts') or
+                                default.getint('max_multipart_parts'))
                     )
                 )
 

@@ -16,6 +16,7 @@ KB = 1024
 MB = KB * KB
 S3_MAX_CONCURRENCY = 20
 
+
 class BackupError(Exception):
     """ Baseclass for backup exceptions. """
 
@@ -290,7 +291,8 @@ class ZFSjob:
         filesystem = snapshot.filesystem
 
         send_size = int(get_snapshot_send_size(filesystem, backup_time))
-        transfer_config = _get_transfer_config(send_size, self._max_multipart_parts)
+        transfer_config = _get_transfer_config(send_size,
+                                               self._max_multipart_parts)
 
         s3_key = f'{filesystem}/{backup_time}.full'
         self._logger.info(f'filesystem={filesystem} '
@@ -337,7 +339,8 @@ class ZFSjob:
         send_size = int(get_snapshot_send_size_inc(filesystem,
                                                    backup_time_full,
                                                    backup_time))
-        transfer_config = _get_transfer_config(send_size, self._max_multipart_parts)
+        transfer_config = _get_transfer_config(send_size,
+                                               self._max_multipart_parts)
 
         s3_key = f'{filesystem}/{backup_time}.inc'
         self._logger.info(f'filesystem={filesystem} '
