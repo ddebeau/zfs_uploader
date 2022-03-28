@@ -15,8 +15,6 @@ from zfs_uploader.zfs import (create_filesystem, get_snapshot_send_size,
 KB = 1024
 MB = KB * KB
 S3_MAX_CONCURRENCY = 20
-S3_MAX_PART_NUMBER = 10000
-
 
 class BackupError(Exception):
     """ Baseclass for backup exceptions. """
@@ -89,6 +87,11 @@ class ZFSjob:
         return self._storage_class
 
     @property
+    def max_multipart_parts(self):
+        """ Maximum number of parts to use in a multipart S3 upload. """
+        return self._max_multipart_parts
+
+    @property
     def backup_db(self):
         """ BackupDB """
         return self._backup_db
@@ -101,7 +104,7 @@ class ZFSjob:
     def __init__(self, bucket_name, access_key, secret_key, filesystem,
                  region=None, cron=None, max_snapshots=None, max_backups=None,
                  max_incremental_backups_per_full=None, storage_class=None,
-                 endpoint=None):
+                 endpoint=None, max_multipart_parts=None):
         """ Create ZFSjob object.
 
         Parameters
@@ -128,6 +131,8 @@ class ZFSjob:
             Maximum number of incremental backups per full backup.
         storage_class : str, default: STANDARD
             S3 storage class.
+        max_multipart_parts : int, default: 10000
+            Maximum number of parts to use in a multipart S3 upload.
 
         """
         self._bucket_name = bucket_name
@@ -150,6 +155,7 @@ class ZFSjob:
         self._max_backups = max_backups
         self._max_incremental_backups_per_full = max_incremental_backups_per_full # noqa
         self._storage_class = storage_class or 'STANDARD'
+        self._max_multipart_parts = max_multipart_parts or 10000
         self._logger = logging.getLogger(__name__)
 
         if max_snapshots and not max_snapshots >= 0:
@@ -284,7 +290,7 @@ class ZFSjob:
         filesystem = snapshot.filesystem
 
         send_size = int(get_snapshot_send_size(filesystem, backup_time))
-        transfer_config = _get_transfer_config(send_size)
+        transfer_config = _get_transfer_config(send_size, self._max_multipart_parts)
 
         s3_key = f'{filesystem}/{backup_time}.full'
         self._logger.info(f'filesystem={filesystem} '
@@ -331,7 +337,7 @@ class ZFSjob:
         send_size = int(get_snapshot_send_size_inc(filesystem,
                                                    backup_time_full,
                                                    backup_time))
-        transfer_config = _get_transfer_config(send_size)
+        transfer_config = _get_transfer_config(send_size, self._max_multipart_parts)
 
         s3_key = f'{filesystem}/{backup_time}.inc'
         self._logger.info(f'filesystem={filesystem} '
@@ -544,10 +550,10 @@ class TransferCallback:
             self._time_0 = time_1
 
 
-def _get_transfer_config(send_size):
+def _get_transfer_config(send_size, max_multipart_parts):
     """ Get transfer config. """
     # should never get close to the max part number
-    chunk_size = send_size // (S3_MAX_PART_NUMBER - 100)
+    chunk_size = send_size // (max_multipart_parts - 100)
     # only set chunk size if greater than default value
     chunk_size = chunk_size if chunk_size > 8 * MB else 8 * MB
     return TransferConfig(max_concurrency=S3_MAX_CONCURRENCY,
