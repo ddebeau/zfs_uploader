@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add optional `max_multipart_parts` config option for supporting storage 
+  providers that don't have the same 10,000 part limit as S3.
+[#61](https://github.com/ddebeau/zfs_uploader/issues/61)
+
 ### Fixed
 
 - Fix bug where the snapshot size was incorrect due to the command missing the
