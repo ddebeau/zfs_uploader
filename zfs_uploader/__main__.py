@@ -57,13 +57,20 @@ def backup(ctx):
     )
 
     for job in config.jobs.values():
-        logger.info(f'filesystem={job.filesystem} '
-                    f'cron="{job.cron}" '
-                    'msg="Adding job."')
-        scheduler.add_job(job.start, 'cron', **job.cron, coalesce=True)
+        if job.cron:
+            logger.info(f'filesystem={job.filesystem} '
+                        f'cron="{job.cron}" '
+                        'msg="Adding job."')
+            scheduler.add_job(job.start, 'cron', **job.cron, coalesce=True)
+        else:
+            # Run the job without the scheduler and make the cron config optional
+            logger.info(f'filesystem={job.filesystem}'
+                        'msg="Running job."')
+            job.start()
 
     try:
-        scheduler.start()
+        if len(scheduler.get_jobs()) > 0:
+            scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         pass
 

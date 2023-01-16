@@ -250,11 +250,6 @@ class ZFSjob:
         backup_type = backup.backup_type
         s3_key = backup.s3_key
 
-        if filesystem:
-            out = create_filesystem(filesystem)
-            if out.returncode:
-                raise ZFSError(out.stderr)
-
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
                 self._logger.info(f'filesystem={self.filesystem} '

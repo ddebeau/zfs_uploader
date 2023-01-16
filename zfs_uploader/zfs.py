@@ -74,7 +74,7 @@ def open_snapshot_stream(filesystem, snapshot_name, mode):
         return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
     elif mode == 'w':
-        cmd = ['zfs', 'receive', '-F', f'{filesystem}@{snapshot_name}']
+        cmd = ['zfs', 'receive', f'{filesystem}@{snapshot_name}']
         return subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
