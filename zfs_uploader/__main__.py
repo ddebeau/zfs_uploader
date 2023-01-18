@@ -46,7 +46,9 @@ def cli(ctx, config_path, log_path):
 @cli.command()
 @click.pass_context
 def backup(ctx):
-    """ Start backup job scheduler. """
+    """ Start backup job scheduler or runs the tasks serially if
+        cron is not provided in the config file
+    """
     config_path = ctx.obj['config_path']
     logger = ctx.obj['logger']
 
@@ -63,7 +65,6 @@ def backup(ctx):
                         'msg="Adding job."')
             scheduler.add_job(job.start, 'cron', **job.cron, coalesce=True)
         else:
-            # Run the job without the scheduler and make the cron config optional
             logger.info(f'filesystem={job.filesystem}'
                         'msg="Running job."')
             job.start()

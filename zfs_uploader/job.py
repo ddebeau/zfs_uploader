@@ -7,7 +7,7 @@ from boto3.s3.transfer import TransferConfig
 
 from zfs_uploader.backup_db import BackupDB
 from zfs_uploader.snapshot_db import SnapshotDB
-from zfs_uploader.zfs import (create_filesystem, get_snapshot_send_size,
+from zfs_uploader.zfs import (get_snapshot_send_size,
                               get_snapshot_send_size_inc,
                               open_snapshot_stream,
                               open_snapshot_stream_inc, ZFSError)
