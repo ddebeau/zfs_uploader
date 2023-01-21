@@ -147,8 +147,8 @@ class JobTestsBase:
             f.write('append')
         self.job.start()
 
-        snapshots = self.job._snapshot_db.get_snapshots()
-        out = destroy_snapshot(self.job.filesystem, snapshots[-1])
+        snapshot_names = self.job._snapshot_db.get_snapshot_names()
+        out = destroy_snapshot(self.job.filesystem, snapshot_names[-1])
         self.assertEqual(0, out.returncode, msg=out.stderr)
 
         with open(self.test_file, 'w') as f:
