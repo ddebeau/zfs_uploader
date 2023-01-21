@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import time
 import sys
@@ -5,9 +6,10 @@ import sys
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-from zfs_uploader.backup_db import BackupDB
+from zfs_uploader.backup_db import BackupDB, DATETIME_FORMAT
 from zfs_uploader.snapshot_db import SnapshotDB
-from zfs_uploader.zfs import (destroy_filesystem, get_snapshot_send_size,
+from zfs_uploader.zfs import (destroy_filesystem, destroy_snapshot,
+                              get_snapshot_send_size,
                               get_snapshot_send_size_inc,
                               open_snapshot_stream,
                               open_snapshot_stream_inc, rollback_filesystem,
@@ -256,6 +258,18 @@ class ZFSjob:
             # file systems we have to remove file systems before restoring
             # ourselves.
             destroy_filesystem(backup.filesystem)
+
+        elif filesystem is None:
+            # Destroy any snapshots that occurred after the backup
+            backup_datetime = datetime.strptime(backup_time, DATETIME_FORMAT)
+            for snapshot in snapshots:
+                snapshot_datetime = datetime.strptime(snapshot.name,
+                                                      DATETIME_FORMAT)
+                if snapshot_datetime > backup_datetime:
+                    destroy_snapshot(backup.filesystem, snapshot.name)
+
+            self._snapshot_db.refresh()
+            snapshots = self._snapshot_db.get_snapshot_names()
 
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
