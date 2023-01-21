@@ -101,12 +101,6 @@ class JobTestsBase:
 
         # When
         self.job.restore()
-        if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
-            self.assertEqual(0, out.returncode, msg=out.stderr)
-
-            out = mount_filesystem(self.job.filesystem)
-            self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
         with open(self.test_file, 'r') as f:
@@ -153,12 +147,6 @@ class JobTestsBase:
 
         # When
         self.job.restore()
-        if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
-            self.assertEqual(0, out.returncode, msg=out.stderr)
-
-            out = mount_filesystem(self.job.filesystem)
-            self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
         with open(self.test_file, 'r') as f:
