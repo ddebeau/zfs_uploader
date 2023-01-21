@@ -3,8 +3,9 @@ import subprocess
 import warnings
 
 from zfs_uploader.config import Config
-from zfs_uploader.zfs import (create_filesystem, destroy_filesystem, load_key,
-                              mount_filesystem, SUBPROCESS_KWARGS)
+from zfs_uploader.zfs import (create_filesystem, destroy_filesystem,
+                              destroy_snapshot, load_key, mount_filesystem,
+                              SUBPROCESS_KWARGS)
 
 
 class JobTestsBase:
@@ -96,6 +97,10 @@ class JobTestsBase:
         # Given
         self.job.start()
 
+        snapshots = self.job._snapshot_db.get_snapshots()
+        out = destroy_snapshot(self.job.filesystem, snapshots[-1])
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
         with open(self.test_file, 'w') as f:
             f.write('new data')
 
@@ -141,6 +146,10 @@ class JobTestsBase:
         with open(self.test_file, 'a') as f:
             f.write('append')
         self.job.start()
+
+        snapshots = self.job._snapshot_db.get_snapshots()
+        out = destroy_snapshot(self.job.filesystem, snapshots[-1])
+        self.assertEqual(0, out.returncode, msg=out.stderr)
 
         with open(self.test_file, 'w') as f:
             f.write('new data')
