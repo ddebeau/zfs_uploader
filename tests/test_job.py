@@ -306,8 +306,9 @@ class JobTestsEncrypted(JobTestsBase, TestCase):
         with open('/test_key', 'w') as f:
             f.write('test_key')
         out = subprocess.run(
-            ['zfs', 'create', '-o', 'encryption=on',
-             '-o', 'keylocation=file:///test_key', self.job.filesystem],
+            ['zfs', 'create', '-o', 'encryption=on', '-o',
+             'keyformat=passphrase', '-o', 'keylocation=file:///test_key',
+             self.job.filesystem],
             **SUBPROCESS_KWARGS
         )
         self.assertEqual(0, out.returncode, msg=out.stderr)
