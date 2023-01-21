@@ -1,8 +1,10 @@
 from unittest import TestCase
+import subprocess
 import warnings
 
 from zfs_uploader.config import Config
-from zfs_uploader.zfs import create_filesystem, destroy_filesystem
+from zfs_uploader.zfs import (create_filesystem, destroy_filesystem,
+                              SUBPROCESS_KWARGS)
 
 
 class JobTestsBase:
@@ -273,6 +275,41 @@ class JobTestsUnencrypted(JobTestsBase, TestCase):
         self.test_data = str(list(range(100_000)))
 
         out = create_filesystem(self.job.filesystem)
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        with open(self.test_file, 'w') as f:
+            f.write(self.test_data)
+
+        self.filesystem_2 = 'test-pool/test-filesystem-2'
+
+    def tearDown(self):
+        for filesystem in [self.job.filesystem, self.filesystem_2]:
+            out = destroy_filesystem(filesystem)
+            if out.returncode:
+                self.assertIn('dataset does not exist', out.stderr)
+
+        for item in self.bucket.objects.all():
+            item.delete()
+
+
+class JobTestsEncrypted(JobTestsBase, TestCase):
+    def setUp(self):
+        warnings.filterwarnings("ignore", category=ResourceWarning,
+                                message="unclosed.*<ssl.SSLSocket.*>")
+
+        config = Config('config.cfg')
+        self.job = next(iter(config.jobs.values()))
+        self.bucket = self.job.bucket
+        self.test_file = f'/{self.job.filesystem}/test_file'
+        self.test_data = str(list(range(100_000)))
+
+        with open('/test_key', 'w') as f:
+            f.write('test_key')
+        out = subprocess.run(
+            ['zfs', 'create', '-o', 'encryption=on',
+             '-o', 'keylocation=file:///test_key', self.job.filesystem],
+            **SUBPROCESS_KWARGS
+        )
         self.assertEqual(0, out.returncode, msg=out.stderr)
 
         with open(self.test_file, 'w') as f:
