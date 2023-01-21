@@ -195,6 +195,31 @@ class JobTestsBase:
             out = f.read()
         self.assertEqual(self.test_data + 'append', out)
 
+    def test_restore_from_full_backup_after_incremental_backup(self):
+        """ Test restoring from a full backup after an incremental backup has
+        been taken without destroying the file system. """
+        # Given
+        self.job.start()
+
+        with open(self.test_file, 'a') as f:
+            f.write('append')
+        self.job.start()
+
+        # When
+        backups = self.job._backup_db.get_backup_times('full')
+        self.job.restore(backups[0])
+        if self.encrypted_test:
+            out = load_key(self.job.filesystem, 'file:///test_key')
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+            out = mount_filesystem(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # Then
+        with open(self.test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data, out)
+
     def test_restore_to_different_filesystem(self):
         """ Test restore to a different filesystem. """
         # Given
