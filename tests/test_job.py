@@ -1,38 +1,11 @@
-import unittest
+from unittest import TestCase
 import warnings
 
 from zfs_uploader.config import Config
 from zfs_uploader.zfs import create_filesystem, destroy_filesystem
 
 
-class JobTests(unittest.TestCase):
-    def setUp(self):
-        warnings.filterwarnings("ignore", category=ResourceWarning,
-                                message="unclosed.*<ssl.SSLSocket.*>")
-
-        config = Config('config.cfg')
-        self.job = next(iter(config.jobs.values()))
-        self.bucket = self.job.bucket
-        self.test_file = f'/{self.job.filesystem}/test_file'
-        self.test_data = str(list(range(100_000)))
-
-        out = create_filesystem(self.job.filesystem)
-        self.assertEqual(0, out.returncode, msg=out.stderr)
-
-        with open(self.test_file, 'w') as f:
-            f.write(self.test_data)
-
-        self.filesystem_2 = 'test-pool/test-filesystem-2'
-
-    def tearDown(self):
-        for filesystem in [self.job.filesystem, self.filesystem_2]:
-            out = destroy_filesystem(filesystem)
-            if out.returncode:
-                self.assertIn('dataset does not exist', out.stderr)
-
-        for item in self.bucket.objects.all():
-            item.delete()
-
+class JobTestsBase:
     def test_start_full(self):
         """ Test job start with full backup. """
         # When
@@ -286,3 +259,32 @@ class JobTests(unittest.TestCase):
         # Only the oldest full backup should be removed.
         backups_full_new = self.job._backup_db.get_backups(backup_type='full')
         self.assertEqual(backups_full[1:], backups_full_new)
+
+
+class JobTestsUnencrypted(JobTestsBase, TestCase):
+    def setUp(self):
+        warnings.filterwarnings("ignore", category=ResourceWarning,
+                                message="unclosed.*<ssl.SSLSocket.*>")
+
+        config = Config('config.cfg')
+        self.job = next(iter(config.jobs.values()))
+        self.bucket = self.job.bucket
+        self.test_file = f'/{self.job.filesystem}/test_file'
+        self.test_data = str(list(range(100_000)))
+
+        out = create_filesystem(self.job.filesystem)
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        with open(self.test_file, 'w') as f:
+            f.write(self.test_data)
+
+        self.filesystem_2 = 'test-pool/test-filesystem-2'
+
+    def tearDown(self):
+        for filesystem in [self.job.filesystem, self.filesystem_2]:
+            out = destroy_filesystem(filesystem)
+            if out.returncode:
+                self.assertIn('dataset does not exist', out.stderr)
+
+        for item in self.bucket.objects.all():
+            item.delete()
