@@ -155,7 +155,7 @@ class JobTestsBase:
             out = load_key(self.filesystem_2, 'file:///test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
-            out = mount_filesystem(self.job.filesystem)
+            out = mount_filesystem(self.filesystem_2)
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
