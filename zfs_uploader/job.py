@@ -258,8 +258,8 @@ class ZFSjob:
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
-                if snapshots:
-                    out = rollback_filesystem(filesystem, snapshots[-1])
+                if snapshots and filesystem is None:
+                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
                     if out.returncode:
                         raise ZFSError(out.stderr)
 
@@ -275,8 +275,8 @@ class ZFSjob:
                                   f's3_key={backup_full.s3_key} '
                                   'msg="Snapshot already exists."')
             else:
-                if snapshots:
-                    out = rollback_filesystem(filesystem, snapshots[-1])
+                if snapshots and filesystem is None:
+                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
                     if out.returncode:
                         raise ZFSError(out.stderr)
                     self._snapshot_db.refresh()
@@ -290,9 +290,10 @@ class ZFSjob:
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
-                out = rollback_filesystem(filesystem, snapshots[-1])
-                if out.returncode:
-                    raise ZFSError(out.stderr)
+                if snapshots and filesystem is None:
+                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
+                    if out.returncode:
+                        raise ZFSError(out.stderr)
 
                 self._restore_snapshot(backup, filesystem)
 
