@@ -91,6 +91,28 @@ class JobTestsBase:
             out = f.read()
         self.assertEqual(self.test_data, out)
 
+    def test_restore_from_full_backup_with_new_data(self):
+        """ Test restore from full backup with new data. """
+        # Given
+        self.job.start()
+
+        with open(self.test_file, 'w') as f:
+            f.write('new data')
+
+        # When
+        self.job.restore()
+        if self.encrypted_test:
+            out = load_key(self.job.filesystem, 'file:///test_key')
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+            out = mount_filesystem(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # Then
+        with open(self.test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data, out)
+
     def test_restore_from_incremental_backup(self):
         """ Test restore from incremental backup. """
         # Given
@@ -102,6 +124,32 @@ class JobTestsBase:
 
         out = destroy_filesystem(self.job.filesystem)
         self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # When
+        self.job.restore()
+        if self.encrypted_test:
+            out = load_key(self.job.filesystem, 'file:///test_key')
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+            out = mount_filesystem(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # Then
+        with open(self.test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data + 'append', out)
+
+    def test_restore_from_incremental_backup_with_new_data(self):
+        """ Test restore from incremental backup with new data. """
+        # Given
+        self.job.start()
+
+        with open(self.test_file, 'a') as f:
+            f.write('append')
+        self.job.start()
+
+        with open(self.test_file, 'w') as f:
+            f.write('new data')
 
         # When
         self.job.restore()
