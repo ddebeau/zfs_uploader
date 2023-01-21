@@ -90,7 +90,7 @@ def open_snapshot_stream_inc(filesystem, snapshot_name_1, snapshot_name_2):
                             stderr=subprocess.PIPE)
 
 
-def load_key(filesystem):
+def load_key(filesystem, keylocation):
     """ Load encryption key. """
-    cmd = ['zfs', 'load-key', filesystem]
+    cmd = ['zfs', 'load-key', '-L', keylocation, filesystem]
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)

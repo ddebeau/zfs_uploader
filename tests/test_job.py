@@ -80,7 +80,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem)
+            out = load_key(self.job.filesystem, 'file:///test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
@@ -103,7 +103,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem)
+            out = load_key(self.job.filesystem, 'file:///test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
@@ -127,7 +127,7 @@ class JobTestsBase:
         backups = self.job._backup_db.get_backup_times('inc')
         self.job.restore(backups[0])
         if self.encrypted_test:
-            out = load_key(self.job.filesystem)
+            out = load_key(self.job.filesystem, 'file:///test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
@@ -143,7 +143,7 @@ class JobTestsBase:
         # When
         self.job.restore(filesystem=self.filesystem_2)
         if self.encrypted_test:
-            out = load_key(self.filesystem_2)
+            out = load_key(self.filesystem_2, 'file:///test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
