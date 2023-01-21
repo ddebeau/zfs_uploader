@@ -52,6 +52,12 @@ def destroy_filesystem(filesystem):
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
+def mount_filesystem(filesystem):
+    """ Mount filesystem. """
+    cmd = ['zfs', 'mount', filesystem]
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
+
+
 def get_snapshot_send_size(filesystem, snapshot_name):
     cmd = ['zfs', 'send', '--raw', '--parsable', '--dryrun',
            f'{filesystem}@{snapshot_name}']

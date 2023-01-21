@@ -4,7 +4,7 @@ import warnings
 
 from zfs_uploader.config import Config
 from zfs_uploader.zfs import (create_filesystem, destroy_filesystem, load_key,
-                              SUBPROCESS_KWARGS)
+                              mount_filesystem, SUBPROCESS_KWARGS)
 
 
 class JobTestsBase:
@@ -83,6 +83,9 @@ class JobTestsBase:
             out = load_key(self.job.filesystem, 'file:///test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
+            out = mount_filesystem(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
         # Then
         with open(self.test_file, 'r') as f:
             out = f.read()
@@ -104,6 +107,9 @@ class JobTestsBase:
         self.job.restore()
         if self.encrypted_test:
             out = load_key(self.job.filesystem, 'file:///test_key')
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+            out = mount_filesystem(self.job.filesystem)
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
@@ -130,6 +136,9 @@ class JobTestsBase:
             out = load_key(self.job.filesystem, 'file:///test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
+            out = mount_filesystem(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
         # Then
         with open(self.test_file, 'r') as f:
             out = f.read()
@@ -144,6 +153,9 @@ class JobTestsBase:
         self.job.restore(filesystem=self.filesystem_2)
         if self.encrypted_test:
             out = load_key(self.filesystem_2, 'file:///test_key')
+            self.assertEqual(0, out.returncode, msg=out.stderr)
+
+            out = mount_filesystem(self.job.filesystem)
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
