@@ -3,7 +3,7 @@ import subprocess
 import warnings
 
 from zfs_uploader.config import Config
-from zfs_uploader.zfs import (create_filesystem, destroy_filesystem,
+from zfs_uploader.zfs import (create_filesystem, destroy_filesystem, load_key,
                               SUBPROCESS_KWARGS)
 
 
@@ -79,6 +79,9 @@ class JobTestsBase:
 
         # When
         self.job.restore()
+        if self.encrypted_test:
+            out = load_key(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
         with open(self.test_file, 'r') as f:
@@ -99,6 +102,9 @@ class JobTestsBase:
 
         # When
         self.job.restore()
+        if self.encrypted_test:
+            out = load_key(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
         with open(self.test_file, 'r') as f:
@@ -120,6 +126,9 @@ class JobTestsBase:
         # When
         backups = self.job._backup_db.get_backup_times('inc')
         self.job.restore(backups[0])
+        if self.encrypted_test:
+            out = load_key(self.job.filesystem)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
         with open(self.test_file, 'r') as f:
@@ -133,6 +142,9 @@ class JobTestsBase:
 
         # When
         self.job.restore(filesystem=self.filesystem_2)
+        if self.encrypted_test:
+            out = load_key(self.filesystem_2)
+            self.assertEqual(0, out.returncode, msg=out.stderr)
 
         # Then
         test_file = f'/{self.filesystem_2}/test_file'
@@ -265,6 +277,7 @@ class JobTestsBase:
 
 class JobTestsUnencrypted(JobTestsBase, TestCase):
     def setUp(self):
+        self.encrypted_test = False
         warnings.filterwarnings("ignore", category=ResourceWarning,
                                 message="unclosed.*<ssl.SSLSocket.*>")
 
@@ -294,6 +307,7 @@ class JobTestsUnencrypted(JobTestsBase, TestCase):
 
 class JobTestsEncrypted(JobTestsBase, TestCase):
     def setUp(self):
+        self.encrypted_test = True
         warnings.filterwarnings("ignore", category=ResourceWarning,
                                 message="unclosed.*<ssl.SSLSocket.*>")
 
