@@ -58,6 +58,12 @@ def mount_filesystem(filesystem):
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
+def rollback_filesystem(filesystem, snapshot_name):
+    """ Rollback filesystem. """
+    cmd = ['zfs', 'rollback', '-r', f'{filesystem}@{snapshot_name}']
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
+
+
 def get_snapshot_send_size(filesystem, snapshot_name):
     cmd = ['zfs', 'send', '--raw', '--parsable', '--dryrun',
            f'{filesystem}@{snapshot_name}']

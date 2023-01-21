@@ -10,7 +10,8 @@ from zfs_uploader.snapshot_db import SnapshotDB
 from zfs_uploader.zfs import (get_snapshot_send_size,
                               get_snapshot_send_size_inc,
                               open_snapshot_stream,
-                              open_snapshot_stream_inc, ZFSError)
+                              open_snapshot_stream_inc, rollback_filesystem,
+                              ZFSError)
 
 KB = 1024
 MB = KB * KB
@@ -257,6 +258,10 @@ class ZFSjob:
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
+                out = rollback_filesystem(filesystem, snapshots[-1])
+                if out.returncode:
+                    raise ZFSError(out.stderr)
+
                 self._restore_snapshot(backup, filesystem)
 
         elif backup_type == 'inc':
@@ -269,6 +274,12 @@ class ZFSjob:
                                   f's3_key={backup_full.s3_key} '
                                   'msg="Snapshot already exists."')
             else:
+                out = rollback_filesystem(filesystem, snapshots[-1])
+                if out.returncode:
+                    raise ZFSError(out.stderr)
+                self._snapshot_db.refresh()
+                snapshots = self._snapshot_db.get_snapshot_names()
+
                 self._restore_snapshot(backup_full, filesystem)
 
             if backup_time in snapshots and filesystem is None:
@@ -277,6 +288,10 @@ class ZFSjob:
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
+                out = rollback_filesystem(filesystem, snapshots[-1])
+                if out.returncode:
+                    raise ZFSError(out.stderr)
+
                 self._restore_snapshot(backup, filesystem)
 
     def _backup_full(self):
