@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fix bug where `zfsup restore` fails when the filesystem is encrypted
+[#69](https://github.com/ddebeau/zfs_uploader/pull/69)
+
 ## [0.8.0](https://github.com/ddebeau/zfs_uploader/compare/0.7.2...0.8.0) 2022-03-28
 
 ### Added
