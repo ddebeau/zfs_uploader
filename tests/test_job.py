@@ -224,6 +224,33 @@ class JobTestsBase:
             out = f.read()
         self.assertEqual(self.test_data, out)
 
+    def test_restore_from_incremental_backup_after_incremental_backup(self):
+        """ Test restoring from an incremental backup after an incremental
+        backup has been taken without destroying the file system. """
+        # Given
+        self.job.start()
+
+        with open(self.test_file, 'a') as f:
+            f.write('append')
+        self.job.start()
+
+        with open(self.test_file, 'a') as f:
+            f.write('append again')
+        self.job.start()
+
+        snapshot_names = self.job._snapshot_db.get_snapshot_names()
+        out = destroy_snapshot(self.job.filesystem, snapshot_names[1])
+        self.assertEqual(0, out.returncode, msg=out.stderr)
+
+        # When
+        backups = self.job._backup_db.get_backup_times('inc')
+        self.job.restore(backups[0])
+
+        # Then
+        with open(self.test_file, 'r') as f:
+            out = f.read()
+        self.assertEqual(self.test_data + 'append', out)
+
     def test_restore_to_different_filesystem(self):
         """ Test restore to a different filesystem. """
         # Given
