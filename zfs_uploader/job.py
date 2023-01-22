@@ -281,7 +281,21 @@ class ZFSjob:
             self._snapshot_db.refresh()
             snapshots = self._snapshot_db.get_snapshot_names()
 
-            if not snapshots:
+            # Rollback to most recent snapshot or destroy filesystem if there
+            # are no snapshots.
+            if snapshots:
+                self._logger.info(f'filesystem={self.filesystem} '
+                                  f'snapshot_name={backup_time} '
+                                  f's3_key={s3_key} '
+                                  'msg="Rolling filesystem back to '
+                                  f'{snapshots[-1]}"')
+                out = rollback_filesystem(backup.filesystem, snapshots[-1])
+                if out.returncode:
+                    raise ZFSError(out.stderr)
+
+                self._snapshot_db.refresh()
+                snapshots = self._snapshot_db.get_snapshot_names()
+            else:
                 self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_time} '
                                   f's3_key={s3_key} '
@@ -296,11 +310,6 @@ class ZFSjob:
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
-                if snapshots and filesystem is None:
-                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
-                    if out.returncode:
-                        raise ZFSError(out.stderr)
-
                 self._restore_snapshot(backup, filesystem)
 
         elif backup_type == 'inc':
@@ -313,13 +322,6 @@ class ZFSjob:
                                   f's3_key={backup_full.s3_key} '
                                   'msg="Snapshot already exists."')
             else:
-                if snapshots and filesystem is None:
-                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
-                    if out.returncode:
-                        raise ZFSError(out.stderr)
-                    self._snapshot_db.refresh()
-                    snapshots = self._snapshot_db.get_snapshot_names()
-
                 self._restore_snapshot(backup_full, filesystem)
 
             if backup_time in snapshots and filesystem is None:
@@ -328,11 +330,6 @@ class ZFSjob:
                                   f's3_key={s3_key} '
                                   'msg="Snapshot already exists."')
             else:
-                if snapshots and filesystem is None:
-                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
-                    if out.returncode:
-                        raise ZFSError(out.stderr)
-
                 self._restore_snapshot(backup, filesystem)
 
     def _backup_full(self):
