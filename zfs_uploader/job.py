@@ -271,6 +271,9 @@ class ZFSjob:
             self._snapshot_db.refresh()
             snapshots = self._snapshot_db.get_snapshot_names()
 
+            if not snapshots:
+                destroy_filesystem(backup.filesystem)
+
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
                 self._logger.info(f'filesystem={self.filesystem} '
