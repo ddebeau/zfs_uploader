@@ -226,7 +226,9 @@ class ZFSjob:
         Defaults to most recent backup if backup_time is not specified.
 
         WARNING: If restoring to a file system that already exists, snapshots
-        and data that were written after the backup will be destroyed.
+        and data that were written after the backup will be destroyed. The
+        file system will also be destroyed if there are no snapshots at any
+        point during the restore process.
 
         Parameters
         ----------
