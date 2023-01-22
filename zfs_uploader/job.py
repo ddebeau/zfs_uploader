@@ -263,10 +263,10 @@ class ZFSjob:
             # Destroy any snapshots that occurred after the backup
             backup_datetime = datetime.strptime(backup_time, DATETIME_FORMAT)
             for snapshot in snapshots:
-                snapshot_datetime = datetime.strptime(snapshot.name,
+                snapshot_datetime = datetime.strptime(snapshot,
                                                       DATETIME_FORMAT)
                 if snapshot_datetime > backup_datetime:
-                    destroy_snapshot(backup.filesystem, snapshot.name)
+                    destroy_snapshot(backup.filesystem, snapshot)
 
             self._snapshot_db.refresh()
             snapshots = self._snapshot_db.get_snapshot_names()
