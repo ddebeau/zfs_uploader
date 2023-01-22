@@ -253,48 +253,50 @@ class ZFSjob:
         backup_type = backup.backup_type
         s3_key = backup.s3_key
 
-        if not snapshots:
-            # Since we can't use the `-F` with `zfs receive` for encrypted
-            # file systems we have to remove file systems before restoring
-            # ourselves.
-            self._logger.info(f'filesystem={self.filesystem} '
-                              f'snapshot_name={backup_time} '
-                              f's3_key={s3_key} '
-                              'msg="Destroying filesystem since there are no '
-                              'snapshots."')
-            destroy_filesystem(backup.filesystem)
-
-        elif filesystem is None:
-            # Destroy any snapshots that occurred after the backup
-            backup_datetime = datetime.strptime(backup_time, DATETIME_FORMAT)
-            for snapshot in snapshots:
-                snapshot_datetime = datetime.strptime(snapshot,
-                                                      DATETIME_FORMAT)
-                if snapshot_datetime > backup_datetime:
-                    self._logger.info(f'filesystem={self.filesystem} '
-                                      f'snapshot_name={backup_time} '
-                                      f's3_key={s3_key} '
-                                      f'msg="Destroying {snapshot} since it '
-                                      'occurred after the backup."')
-                    destroy_snapshot(backup.filesystem, snapshot)
-
-            self._snapshot_db.refresh()
-            snapshots = self._snapshot_db.get_snapshot_names()
-
-            # Rollback to most recent snapshot or destroy filesystem if there
-            # are no snapshots.
+        # Since we can't use the `-F` option with `zfs receive` for encrypted
+        # filesystems we have to handle removing filesystems, snapshots, and
+        # data written after the most recent snapshot ourselves.
+        if filesystem is None:
             if snapshots:
-                self._logger.info(f'filesystem={self.filesystem} '
-                                  f'snapshot_name={backup_time} '
-                                  f's3_key={s3_key} '
-                                  'msg="Rolling filesystem back to '
-                                  f'{snapshots[-1]}"')
-                out = rollback_filesystem(backup.filesystem, snapshots[-1])
-                if out.returncode:
-                    raise ZFSError(out.stderr)
+                # Destroy any snapshots that occurred after the backup
+                backup_datetime = datetime.strptime(backup_time,
+                                                    DATETIME_FORMAT)
+                for snapshot in snapshots:
+                    snapshot_datetime = datetime.strptime(snapshot,
+                                                          DATETIME_FORMAT)
+                    if snapshot_datetime > backup_datetime:
+                        self._logger.info(f'filesystem={self.filesystem} '
+                                          f'snapshot_name={backup_time} '
+                                          f's3_key={s3_key} '
+                                          f'msg="Destroying {snapshot} since '
+                                          'it occurred after the backup."')
+                        destroy_snapshot(backup.filesystem, snapshot)
 
                 self._snapshot_db.refresh()
                 snapshots = self._snapshot_db.get_snapshot_names()
+
+                # Rollback to most recent snapshot or destroy filesystem if
+                # there are no snapshots.
+                if snapshots:
+                    self._logger.info(f'filesystem={self.filesystem} '
+                                      f'snapshot_name={backup_time} '
+                                      f's3_key={s3_key} '
+                                      'msg="Rolling filesystem back to '
+                                      f'{snapshots[-1]}"')
+                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
+                    if out.returncode:
+                        raise ZFSError(out.stderr)
+
+                    self._snapshot_db.refresh()
+                    snapshots = self._snapshot_db.get_snapshot_names()
+                else:
+                    self._logger.info(f'filesystem={self.filesystem} '
+                                      f'snapshot_name={backup_time} '
+                                      f's3_key={s3_key} '
+                                      'msg="Destroying filesystem since there '
+                                      'are no snapshots."')
+                    destroy_filesystem(backup.filesystem)
+
             else:
                 self._logger.info(f'filesystem={self.filesystem} '
                                   f'snapshot_name={backup_time} '
