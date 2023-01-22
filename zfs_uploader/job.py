@@ -257,6 +257,11 @@ class ZFSjob:
             # Since we can't use the `-F` with `zfs receive` for encrypted
             # file systems we have to remove file systems before restoring
             # ourselves.
+            self._logger.info(f'filesystem={self.filesystem} '
+                              f'snapshot_name={backup_time} '
+                              f's3_key={s3_key} '
+                              'msg="Destroying filesystem since there are no '
+                              'snapshots."')
             destroy_filesystem(backup.filesystem)
 
         elif filesystem is None:
@@ -266,12 +271,22 @@ class ZFSjob:
                 snapshot_datetime = datetime.strptime(snapshot,
                                                       DATETIME_FORMAT)
                 if snapshot_datetime > backup_datetime:
+                    self._logger.info(f'filesystem={self.filesystem} '
+                                      f'snapshot_name={backup_time} '
+                                      f's3_key={s3_key} '
+                                      f'msg="Destroying {snapshot} since it '
+                                      'occurred after the backup."')
                     destroy_snapshot(backup.filesystem, snapshot)
 
             self._snapshot_db.refresh()
             snapshots = self._snapshot_db.get_snapshot_names()
 
             if not snapshots:
+                self._logger.info(f'filesystem={self.filesystem} '
+                                  f'snapshot_name={backup_time} '
+                                  f's3_key={s3_key} '
+                                  'msg="Destroying filesystem since there are '
+                                  'no snapshots."')
                 destroy_filesystem(backup.filesystem)
 
         if backup_type == 'full':
