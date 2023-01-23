@@ -254,6 +254,7 @@ class ZFSjob:
         backup_time = backup.backup_time
         backup_type = backup.backup_type
         s3_key = backup.s3_key
+
         # Since we can't use the `-F` option with `zfs receive` for encrypted
         # filesystems we have to handle removing filesystems, snapshots, and
         # data written after the most recent snapshot ourselves.
