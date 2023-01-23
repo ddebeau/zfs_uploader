@@ -52,6 +52,18 @@ def destroy_filesystem(filesystem):
     return subprocess.run(cmd, **SUBPROCESS_KWARGS)
 
 
+def mount_filesystem(filesystem):
+    """ Mount filesystem. """
+    cmd = ['zfs', 'mount', filesystem]
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
+
+
+def rollback_filesystem(filesystem, snapshot_name):
+    """ Rollback filesystem. """
+    cmd = ['zfs', 'rollback', '-r', f'{filesystem}@{snapshot_name}']
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)
+
+
 def get_snapshot_send_size(filesystem, snapshot_name):
     cmd = ['zfs', 'send', '--raw', '--parsable', '--dryrun',
            f'{filesystem}@{snapshot_name}']
@@ -88,3 +100,9 @@ def open_snapshot_stream_inc(filesystem, snapshot_name_1, snapshot_name_2):
            f'{filesystem}@{snapshot_name_2}']
     return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
+
+
+def load_key(filesystem, keylocation):
+    """ Load encryption key. """
+    cmd = ['zfs', 'load-key', '-L', keylocation, filesystem]
+    return subprocess.run(cmd, **SUBPROCESS_KWARGS)

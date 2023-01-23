@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import time
 import sys
@@ -5,12 +6,14 @@ import sys
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-from zfs_uploader.backup_db import BackupDB
+from zfs_uploader.backup_db import BackupDB, DATETIME_FORMAT
 from zfs_uploader.snapshot_db import SnapshotDB
-from zfs_uploader.zfs import (get_snapshot_send_size,
+from zfs_uploader.zfs import (destroy_filesystem, destroy_snapshot,
+                              get_snapshot_send_size,
                               get_snapshot_send_size_inc,
                               open_snapshot_stream,
-                              open_snapshot_stream_inc, ZFSError)
+                              open_snapshot_stream_inc, rollback_filesystem,
+                              ZFSError)
 
 KB = 1024
 MB = KB * KB
@@ -223,7 +226,9 @@ class ZFSjob:
         Defaults to most recent backup if backup_time is not specified.
 
         WARNING: If restoring to a file system that already exists, snapshots
-        and data that were written after the backup will be destroyed.
+        and data that were written after the backup will be destroyed. The
+        file system will also be destroyed if there are no snapshots at any
+        point during the restore process.
 
         Parameters
         ----------
@@ -249,6 +254,57 @@ class ZFSjob:
         backup_time = backup.backup_time
         backup_type = backup.backup_type
         s3_key = backup.s3_key
+        # Since we can't use the `-F` option with `zfs receive` for encrypted
+        # filesystems we have to handle removing filesystems, snapshots, and
+        # data written after the most recent snapshot ourselves.
+        if filesystem is None:
+            if snapshots:
+                # Destroy any snapshots that occurred after the backup
+                backup_datetime = datetime.strptime(backup_time,
+                                                    DATETIME_FORMAT)
+                for snapshot in snapshots:
+                    snapshot_datetime = datetime.strptime(snapshot,
+                                                          DATETIME_FORMAT)
+                    if snapshot_datetime > backup_datetime:
+                        self._logger.info(f'filesystem={self.filesystem} '
+                                          f'snapshot_name={backup_time} '
+                                          f's3_key={s3_key} '
+                                          f'msg="Destroying {snapshot} since '
+                                          'it occurred after the backup."')
+                        destroy_snapshot(backup.filesystem, snapshot)
+
+                self._snapshot_db.refresh()
+                snapshots = self._snapshot_db.get_snapshot_names()
+
+                # Rollback to most recent snapshot or destroy filesystem if
+                # there are no snapshots.
+                if snapshots:
+                    self._logger.info(f'filesystem={self.filesystem} '
+                                      f'snapshot_name={backup_time} '
+                                      f's3_key={s3_key} '
+                                      'msg="Rolling filesystem back to '
+                                      f'{snapshots[-1]}"')
+                    out = rollback_filesystem(backup.filesystem, snapshots[-1])
+                    if out.returncode:
+                        raise ZFSError(out.stderr)
+
+                    self._snapshot_db.refresh()
+                    snapshots = self._snapshot_db.get_snapshot_names()
+                else:
+                    self._logger.info(f'filesystem={self.filesystem} '
+                                      f'snapshot_name={backup_time} '
+                                      f's3_key={s3_key} '
+                                      'msg="Destroying filesystem since there '
+                                      'are no snapshots."')
+                    destroy_filesystem(backup.filesystem)
+
+            else:
+                self._logger.info(f'filesystem={self.filesystem} '
+                                  f'snapshot_name={backup_time} '
+                                  f's3_key={s3_key} '
+                                  'msg="Destroying filesystem since there are '
+                                  'no snapshots."')
+                destroy_filesystem(backup.filesystem)
 
         if backup_type == 'full':
             if backup_time in snapshots and filesystem is None:
