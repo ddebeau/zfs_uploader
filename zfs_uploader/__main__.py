@@ -46,7 +46,9 @@ def cli(ctx, config_path, log_path):
 @cli.command()
 @click.pass_context
 def backup(ctx):
-    """ Start backup job scheduler. """
+    """ Start backup job scheduler or run the tasks serially if
+        cron is not provided in the config file.
+    """
     config_path = ctx.obj['config_path']
     logger = ctx.obj['logger']
 
@@ -57,13 +59,19 @@ def backup(ctx):
     )
 
     for job in config.jobs.values():
-        logger.info(f'filesystem={job.filesystem} '
-                    f'cron="{job.cron}" '
-                    'msg="Adding job."')
-        scheduler.add_job(job.start, 'cron', **job.cron, coalesce=True)
+        if job.cron:
+            logger.info(f'filesystem={job.filesystem} '
+                        f'cron="{job.cron}" '
+                        'msg="Adding job."')
+            scheduler.add_job(job.start, 'cron', **job.cron, coalesce=True)
+        else:
+            logger.info(f'filesystem={job.filesystem}'
+                        'msg="Running job."')
+            job.start()
 
     try:
-        scheduler.start()
+        if len(scheduler.get_jobs()) > 0:
+            scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         pass
 
