@@ -46,8 +46,8 @@ def cli(ctx, config_path, log_path):
 @cli.command()
 @click.pass_context
 def backup(ctx):
-    """ Start backup job scheduler or runs the tasks serially if
-        cron is not provided in the config file
+    """ Start backup job scheduler or run the tasks serially if
+        cron is not provided in the config file.
     """
     config_path = ctx.obj['config_path']
     logger = ctx.obj['logger']
