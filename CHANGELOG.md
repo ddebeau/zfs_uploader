@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fix bug where the CRON config is not optional
+[#68](https://github.com/ddebeau/zfs_uploader/pull/68)
+
 - Fix bug where `zfsup restore` fails when the filesystem is encrypted
 [#69](https://github.com/ddebeau/zfs_uploader/pull/69)
 
