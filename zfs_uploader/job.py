@@ -63,7 +63,7 @@ class ZFSjob:
 
     @property
     def prefix(self):
-        """ S3 key prefix. """
+        """ Prefix to be prepended to the s3 key. """
         return self._prefix
 
     @property
