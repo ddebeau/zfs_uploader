@@ -14,7 +14,7 @@ def get_date_time():
     return datetime.now().strftime(DATETIME_FORMAT)
 
 
-def derive_s3_key(object_name, filesystem, s3_prefix=None):
+def derive_s3_key(object_name, filesystem, prefix=None):
     """
     Derive the s3 key for the object.
 
@@ -24,7 +24,7 @@ def derive_s3_key(object_name, filesystem, s3_prefix=None):
       The object name. Such as backup.db or the full/inc snapshot name.
     filesystem : str
       The ZFS filesystem.
-    s3_prefix : str, optional
+    prefix : str, optional
       The s3 prefix to prepend to the key.
 
     Returns
@@ -33,6 +33,6 @@ def derive_s3_key(object_name, filesystem, s3_prefix=None):
 
     """
     s3_key = f'{filesystem}/{object_name}'
-    if s3_prefix is not None:
-        s3_key = f'{s3_prefix}/{s3_key}'
+    if prefix is not None:
+        s3_key = f'{prefix}/{s3_key}'
     return s3_key

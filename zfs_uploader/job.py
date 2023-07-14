@@ -62,9 +62,9 @@ class ZFSjob:
         return self._filesystem
 
     @property
-    def s3_prefix(self):
+    def prefix(self):
         """ S3 key prefix. """
-        return self._s3_prefix
+        return self._prefix
 
     @property
     def s3(self):
@@ -112,7 +112,7 @@ class ZFSjob:
         return self._snapshot_db
 
     def __init__(self, bucket_name, access_key, secret_key, filesystem,
-                 s3_prefix=None, region=None, cron=None, max_snapshots=None,
+                 prefix=None, region=None, cron=None, max_snapshots=None,
                  max_backups=None, max_incremental_backups_per_full=None,
                  storage_class=None, endpoint=None, max_multipart_parts=None):
         """ Create ZFSjob object.
@@ -127,7 +127,7 @@ class ZFSjob:
             S3 secret key.
         filesystem : str
             ZFS filesystem.
-        s3_prefix : str, optional
+        prefix : str, optional
             The prefix added to the s3 key for backups.
         region : str, default: us-east-1
             S3 region.
@@ -152,7 +152,7 @@ class ZFSjob:
         self._access_key = access_key
         self._secret_key = secret_key
         self._filesystem = filesystem
-        self._s3_prefix = s3_prefix
+        self._prefix = prefix
         self._endpoint = endpoint
 
         self._s3 = boto3.resource(service_name='s3',
@@ -162,7 +162,7 @@ class ZFSjob:
                                   endpoint_url=endpoint)
         self._bucket = self._s3.Bucket(self._bucket_name)
         self._backup_db = BackupDB(self._bucket, self._filesystem,
-                                   self._s3_prefix)
+                                   self._prefix)
         self._snapshot_db = SnapshotDB(self._filesystem)
         self._cron = cron
         self._max_snapshots = max_snapshots
@@ -357,7 +357,7 @@ class ZFSjob:
                                                self._max_multipart_parts)
 
         s3_key = derive_s3_key(f'{backup_time}.full', filesystem,
-                               self.s3_prefix)
+                               self.prefix)
 
         self._logger.info(f'filesystem={filesystem} '
                           f'snapshot_name={backup_time} '
@@ -407,7 +407,7 @@ class ZFSjob:
                                                self._max_multipart_parts)
 
         s3_key = derive_s3_key(f'{backup_time}.inc', filesystem,
-                               self.s3_prefix)
+                               self.prefix)
 
         self._logger.info(f'filesystem={filesystem} '
                           f'snapshot_name={backup_time} '

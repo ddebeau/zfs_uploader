@@ -65,8 +65,8 @@ class Config:
                         access_key,
                         secret_key,
                         filesystem,
-                        s3_prefix=(v.get('s3_prefix') or
-                                   default.get('s3_prefix')),
+                        prefix=(v.get('prefix') or
+                                   default.get('prefix')),
                         region=v.get('region') or default.get('region'),
                         endpoint=v.get('endpoint') or default.get('endpoint'),
                         cron=cron_dict,

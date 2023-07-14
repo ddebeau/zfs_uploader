@@ -66,7 +66,7 @@ jobs can be set in one file.
    S3 secret key.
 #### filesystem : str
    ZFS filesystem.
-#### s3_prefix : str, optional
+#### prefix : str, optional
    Prefix to be prepended to the s3 key.
 #### region : str, default: us-east-1
    S3 region.
