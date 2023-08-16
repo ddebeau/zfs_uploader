@@ -8,6 +8,7 @@ from boto3.s3.transfer import TransferConfig
 
 from zfs_uploader.backup_db import BackupDB, DATETIME_FORMAT
 from zfs_uploader.snapshot_db import SnapshotDB
+from zfs_uploader.utils import derive_s3_key
 from zfs_uploader.zfs import (destroy_filesystem, destroy_snapshot,
                               get_snapshot_send_size,
                               get_snapshot_send_size_inc,
@@ -61,6 +62,11 @@ class ZFSjob:
         return self._filesystem
 
     @property
+    def prefix(self):
+        """ Prefix to be prepended to the s3 key. """
+        return self._prefix
+
+    @property
     def s3(self):
         """ S3 resource. """
         return self._s3
@@ -106,9 +112,9 @@ class ZFSjob:
         return self._snapshot_db
 
     def __init__(self, bucket_name, access_key, secret_key, filesystem,
-                 region=None, cron=None, max_snapshots=None, max_backups=None,
-                 max_incremental_backups_per_full=None, storage_class=None,
-                 endpoint=None, max_multipart_parts=None):
+                 prefix=None, region=None, cron=None, max_snapshots=None,
+                 max_backups=None, max_incremental_backups_per_full=None,
+                 storage_class=None, endpoint=None, max_multipart_parts=None):
         """ Create ZFSjob object.
 
         Parameters
@@ -121,6 +127,8 @@ class ZFSjob:
             S3 secret key.
         filesystem : str
             ZFS filesystem.
+        prefix : str, optional
+            The prefix added to the s3 key for backups.
         region : str, default: us-east-1
             S3 region.
         endpoint : str, optional
@@ -144,6 +152,7 @@ class ZFSjob:
         self._access_key = access_key
         self._secret_key = secret_key
         self._filesystem = filesystem
+        self._prefix = prefix
         self._endpoint = endpoint
 
         self._s3 = boto3.resource(service_name='s3',
@@ -152,7 +161,8 @@ class ZFSjob:
                                   aws_secret_access_key=self._secret_key,
                                   endpoint_url=endpoint)
         self._bucket = self._s3.Bucket(self._bucket_name)
-        self._backup_db = BackupDB(self._bucket, self._filesystem)
+        self._backup_db = BackupDB(self._bucket, self._filesystem,
+                                   self._prefix)
         self._snapshot_db = SnapshotDB(self._filesystem)
         self._cron = cron
         self._max_snapshots = max_snapshots
@@ -346,7 +356,9 @@ class ZFSjob:
         transfer_config = _get_transfer_config(send_size,
                                                self._max_multipart_parts)
 
-        s3_key = f'{filesystem}/{backup_time}.full'
+        s3_key = derive_s3_key(f'{backup_time}.full', filesystem,
+                               self.prefix)
+
         self._logger.info(f'filesystem={filesystem} '
                           f'snapshot_name={backup_time} '
                           f's3_key={s3_key} '
@@ -394,7 +406,9 @@ class ZFSjob:
         transfer_config = _get_transfer_config(send_size,
                                                self._max_multipart_parts)
 
-        s3_key = f'{filesystem}/{backup_time}.inc'
+        s3_key = derive_s3_key(f'{backup_time}.inc', filesystem,
+                               self.prefix)
+
         self._logger.info(f'filesystem={filesystem} '
                           f'snapshot_name={backup_time} '
                           f's3_key={s3_key} '
