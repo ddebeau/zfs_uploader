@@ -13,7 +13,8 @@ config['DEFAULT'] = {
 config['test-pool/test-filesystem'] = {
     'cron': '* * * * *',
     'max_snapshots': 3,
-    'max_incremental_backups': 5
+    'max_incremental_backups': 5,
+    'recursive': False
 }
 
 with open('config.cfg', 'w') as f:

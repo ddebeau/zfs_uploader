@@ -84,6 +84,8 @@ jobs can be set in one file.
    S3 storage class.
 #### max_multipart_parts : int, default: 10000
    Maximum number of parts to use in a multipart S3 upload.
+#### recursive : bool, default: false
+   Backup nested ZFS datasets and volumes along with the given one.
 
 ### Examples
 #### Multiple full backups
@@ -100,6 +102,7 @@ cron = 0 2 * * *
 max_snapshots = 7
 max_incremental_backups_per_full = 6
 max_backups = 7
+recursive = false
 ```
 
 Filesystem is backed up at 02:00 daily. Only the most recent 7 snapshots
