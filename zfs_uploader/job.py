@@ -167,7 +167,7 @@ class ZFSjob:
         self._cron = cron
         self._max_snapshots = max_snapshots
         self._max_backups = max_backups
-        self._max_incremental_backups_per_full = max_incremental_backups_per_full # noqa
+        self._max_incremental_backups_per_full = max_incremental_backups_per_full  # noqa
         self._storage_class = storage_class or 'STANDARD'
         self._max_multipart_parts = max_multipart_parts or 10000
         self._logger = logging.getLogger(__name__)
@@ -184,7 +184,7 @@ class ZFSjob:
                                'than or equal to 1."')
             sys.exit(1)
 
-        if max_incremental_backups_per_full and not max_incremental_backups_per_full >= 0: # noqa
+        if max_incremental_backups_per_full and not max_incremental_backups_per_full >= 0:  # noqa
             self._logger.error(f'filesystem={self._filesystem} '
                                'msg="max_incremental_backups_per_full must be '
                                'greater than or equal to 0."')
@@ -200,7 +200,6 @@ class ZFSjob:
         backup = backups_full[-1] if backups_full else None
         last_incremental = backups_inc[-1] if backups_inc else None
         incremental_or_full = last_incremental if last_incremental else backup
-        
 
         # if no full backup exists
         if backup is None:
@@ -330,14 +329,16 @@ class ZFSjob:
                 self._restore_snapshot(backup, filesystem)
 
         elif backup_type == 'inc':
-            # Walk the dependency tree and find the root which is a full. Restore in reverse traversal order until we reach the requested backup
+            # Walk the dependency tree and find the root which is a full.
+            # Restore in reverse traversal order until we reach the
+            # requested backup
             backup_tree = []
-            backup_tree.append(backup) # Insert the current selected backup
+            backup_tree.append(backup)  # Insert the current selected backup
             next = self._backup_db.get_backup(backup.dependency)
             while next.dependency:
                 backup_tree.append(next)
                 next = self._backup_db.get_backup(next.dependency)
-            
+
             # Add the last one which is the full
             backup_tree.append(next)
 
@@ -346,13 +347,11 @@ class ZFSjob:
             for b in backup_tree:
                 if b.backup_time in snapshots and filesystem is None:
                     self._logger.info(f'filesystem={self.filesystem} '
-                                    f'snapshot_name={b.backup_time} '
-                                    f's3_key={b.s3_key} '
-                                    'msg="Snapshot already exists."')
+                                      f'snapshot_name={b.backup_time} '
+                                      f's3_key={b.s3_key} '
+                                      'msg="Snapshot already exists."')
                 else:
                     self._restore_snapshot(b, filesystem)
-
-        
 
     def _backup_full(self):
         """ Create snapshot and upload full backup. """
@@ -458,7 +457,7 @@ class ZFSjob:
             File system to restore to. Defaults to the file system that the
             backup was taken from.
         """
-        
+
         backup_time = backup.backup_time
         backup_size = backup.backup_size
         filesystem = filesystem or backup.filesystem
@@ -564,15 +563,14 @@ class ZFSjob:
         deleted_count = 0
         for backup in backups:
             backup_time = backup.backup_time
-            backup_type = backup.backup_type
             s3_key = backup.s3_key
 
             dependants = any([True if b.dependency == backup_time
-                                  else False for b in backups])
+                              else False for b in backups])
             if dependants:
                 self._logger.info(f's3_key={s3_key} '
-                                    'msg="Backup has dependants. Not '
-                                    'deleting."')
+                                  'msg="Backup has dependants. Not '
+                                  'deleting."')
             else:
                 self._delete_backup(backup)
                 deleted_count += 1

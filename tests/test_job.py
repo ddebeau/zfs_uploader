@@ -356,7 +356,7 @@ class JobTestsBase:
         self.assertEqual(backups_full, backups_full_new)
 
         backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
-        # Can only nuke the last backup as the others have dependants 
+        # Can only nuke the last backup as the others have dependants
         self.assertEqual(backups_inc[:1], backups_inc_new)
 
         # When
