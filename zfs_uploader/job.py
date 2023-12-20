@@ -212,7 +212,7 @@ class ZFSjob:
 
         # if we want incremental backups and multiple full backups
         elif self._max_incremental_backups_per_full:
-            backup_time = incremental_or_full.backup_time
+            backup_time = backup.backup_time
 
             # TODO: Verify this
             dependants = [True if b.dependency == backup_time
@@ -333,6 +333,7 @@ class ZFSjob:
         elif backup_type == 'inc':
             # TODO: Walk the dependency tree and find the root which is a full. Restore in reverse traversal order until we reach the requested backup
             backup_tree = []
+            backup_tree.append(backup) # Insert the current selected backup
             next = self._backup_db.get_backup(backup.dependency)
             while next.dependency:
                 backup_tree.append(next)
@@ -564,29 +565,24 @@ class ZFSjob:
             self._logger.info(f'filesystem={self._filesystem} '
                               'msg="Backup limit achieved."')
 
-        count = 0
-        while len(backups) > self._max_backups:
-            backup = backups[count]
+        deleted_count = 0
+        for backup in backups:
             backup_time = backup.backup_time
             backup_type = backup.backup_type
             s3_key = backup.s3_key
 
-            if backup_type == "inc":
-                self._delete_backup(backup)
-                backups.pop(count)
-
-            elif backup_type == "full":
-                dependants = any([True if b.dependency == backup_time
+            dependants = any([True if b.dependency == backup_time
                                   else False for b in backups])
-                if dependants:
-                    self._logger.info(f's3_key={s3_key} '
-                                      'msg="Backup has dependants. Not '
-                                      'deleting."')
-                else:
-                    self._delete_backup(backup)
-                    backups.pop(count)
+            if dependants:
+                self._logger.info(f's3_key={s3_key} '
+                                    'msg="Backup has dependants. Not '
+                                    'deleting."')
+            else:
+                self._delete_backup(backup)
+                deleted_count += 1
 
-            count += 1
+            if len(backups) - deleted_count == self._max_backups:
+                break
 
 
 class TransferCallback:

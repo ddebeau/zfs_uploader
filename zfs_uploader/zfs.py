@@ -76,7 +76,10 @@ def get_snapshot_send_size_inc(filesystem, snapshot_name_1, snapshot_name_2):
            f'{filesystem}@{snapshot_name_1}',
            f'{filesystem}@{snapshot_name_2}']
     out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
-    return out.stdout.splitlines()[1].split()[1]
+    lines = out.stdout.splitlines()
+    if lines:
+        return lines[1].split()[1]
+    return None
 
 
 def open_snapshot_stream(filesystem, snapshot_name, mode):

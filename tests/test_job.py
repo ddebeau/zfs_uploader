@@ -81,7 +81,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -107,7 +107,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -133,7 +133,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -184,7 +184,7 @@ class JobTestsBase:
         backups = self.job._backup_db.get_backup_times('inc')
         self.job.restore(backups[0])
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -213,7 +213,7 @@ class JobTestsBase:
         backups = self.job._backup_db.get_backup_times('full')
         self.job.restore(backups[0])
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -259,7 +259,7 @@ class JobTestsBase:
         # When
         self.job.restore(filesystem=self.filesystem_2)
         if self.encrypted_test:
-            out = load_key(self.filesystem_2, 'file:///test_key')
+            out = load_key(self.filesystem_2, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.filesystem_2)
@@ -356,7 +356,8 @@ class JobTestsBase:
         self.assertEqual(backups_full, backups_full_new)
 
         backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
-        self.assertEqual(backups_inc[1:], backups_inc_new)
+        # Can only nuke the last backup as the others have dependants 
+        self.assertEqual(backups_inc[:1], backups_inc_new)
 
         # When
         self.job._max_backups = 1
@@ -436,11 +437,11 @@ class JobTestsEncrypted(JobTestsBase, TestCase):
         self.test_file = f'/{self.job.filesystem}/test_file'
         self.test_data = str(list(range(100_000)))
 
-        with open('/test_key', 'w') as f:
+        with open('/tmp/test_key', 'w') as f:
             f.write('test_key')
         out = subprocess.run(
             ['zfs', 'create', '-o', 'encryption=on', '-o',
-             'keyformat=passphrase', '-o', 'keylocation=file:///test_key',
+             'keyformat=passphrase', '-o', 'keylocation=file:///tmp/test_key',
              self.job.filesystem],
             **SUBPROCESS_KWARGS
         )
