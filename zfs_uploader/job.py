@@ -18,7 +18,7 @@ from zfs_uploader.zfs import (destroy_filesystem, destroy_snapshot,
 
 KB = 1024
 MB = KB * KB
-S3_MAX_CONCURRENCY = 1
+S3_MAX_CONCURRENCY = 20
 
 
 class BackupError(Exception):
@@ -214,7 +214,6 @@ class ZFSjob:
         elif self._max_incremental_backups_per_full:
             backup_time = backup.backup_time
 
-            # TODO: Verify this
             dependants = [True if b.dependency == backup_time
                           else False for b in backups_inc]
 
@@ -331,7 +330,7 @@ class ZFSjob:
                 self._restore_snapshot(backup, filesystem)
 
         elif backup_type == 'inc':
-            # TODO: Walk the dependency tree and find the root which is a full. Restore in reverse traversal order until we reach the requested backup
+            # Walk the dependency tree and find the root which is a full. Restore in reverse traversal order until we reach the requested backup
             backup_tree = []
             backup_tree.append(backup) # Insert the current selected backup
             next = self._backup_db.get_backup(backup.dependency)
@@ -339,7 +338,6 @@ class ZFSjob:
                 backup_tree.append(next)
                 next = self._backup_db.get_backup(next.dependency)
             
-
             # Add the last one which is the full
             backup_tree.append(next)
 
@@ -460,8 +458,6 @@ class ZFSjob:
             File system to restore to. Defaults to the file system that the
             backup was taken from.
         """
-        import threading
-        print (threading.get_ident())
         
         backup_time = backup.backup_time
         backup_size = backup.backup_size
