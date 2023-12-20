@@ -17,7 +17,7 @@ from zfs_uploader.zfs import (destroy_filesystem, destroy_snapshot,
 
 KB = 1024
 MB = KB * KB
-S3_MAX_CONCURRENCY = 20
+S3_MAX_CONCURRENCY = 1
 
 
 class BackupError(Exception):
@@ -188,6 +188,9 @@ class ZFSjob:
 
         # find most recent full backup
         backup = backups_full[-1] if backups_full else None
+        last_incremental = backups_inc[-1] if backups_inc else None
+        incremental_or_full = last_incremental if last_incremental else backup
+        
 
         # if no full backup exists
         if backup is None:
@@ -199,8 +202,9 @@ class ZFSjob:
 
         # if we want incremental backups and multiple full backups
         elif self._max_incremental_backups_per_full:
-            backup_time = backup.backup_time
+            backup_time = incremental_or_full.backup_time
 
+            # TODO: Verify this
             dependants = [True if b.dependency == backup_time
                           else False for b in backups_inc]
 
@@ -211,7 +215,7 @@ class ZFSjob:
 
         # if we want incremental backups and not multiple full backups
         else:
-            self._backup_incremental(backup.backup_time)
+            self._backup_incremental(incremental_or_full.backup_time)
 
         if self._max_snapshots or self._max_snapshots == 0:
             self._limit_snapshots()
@@ -246,7 +250,7 @@ class ZFSjob:
             backup = self._backup_db.get_backup(backup_time)
         else:
             backups = self._backup_db.get_backups()
-            if backups is None:
+            if backups is None or len(backups) == 0:
                 raise RestoreError('No backups exist.')
             else:
                 backup = backups[-1]
@@ -317,24 +321,29 @@ class ZFSjob:
                 self._restore_snapshot(backup, filesystem)
 
         elif backup_type == 'inc':
-            # restore full backup first
-            backup_full = self._backup_db.get_backup(backup.dependency)
+            # TODO: Walk the dependency tree and find the root which is a full. Restore in reverse traversal order until we reach the requested backup
+            backup_tree = []
+            next = self._backup_db.get_backup(backup.dependency)
+            while next.dependency:
+                backup_tree.append(next)
+                next = self._backup_db.get_backup(next.dependency)
+            
 
-            if backup_full.backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={self.filesystem} '
-                                  f'snapshot_name={backup_full.backup_time} '
-                                  f's3_key={backup_full.s3_key} '
-                                  'msg="Snapshot already exists."')
-            else:
-                self._restore_snapshot(backup_full, filesystem)
+            # Add the last one which is the full
+            backup_tree.append(next)
 
-            if backup_time in snapshots and filesystem is None:
-                self._logger.info(f'filesystem={self.filesystem} '
-                                  f'snapshot_name={backup_time} '
-                                  f's3_key={s3_key} '
-                                  'msg="Snapshot already exists."')
-            else:
-                self._restore_snapshot(backup, filesystem)
+            # restore backups in reverse order
+            backup_tree.reverse()
+            for b in backup_tree:
+                if b.backup_time in snapshots and filesystem is None:
+                    self._logger.info(f'filesystem={self.filesystem} '
+                                    f'snapshot_name={b.backup_time} '
+                                    f's3_key={b.s3_key} '
+                                    'msg="Snapshot already exists."')
+                else:
+                    self._restore_snapshot(b, filesystem)
+
+        
 
     def _backup_full(self):
         """ Create snapshot and upload full backup. """
@@ -375,12 +384,12 @@ class ZFSjob:
                           f's3_key={s3_key} '
                           'msg="Finished full backup."')
 
-    def _backup_incremental(self, backup_time_full):
+    def _backup_incremental(self, backup_time_base_snapshot):
         """ Create snapshot and upload incremental backup.
 
         Parameters
         ----------
-        backup_time_full : str
+        backup_time_base_snapshot : str
             Backup time in %Y%m%d_%H%M%S format.
 
         """
@@ -389,7 +398,7 @@ class ZFSjob:
         filesystem = snapshot.filesystem
 
         send_size = int(get_snapshot_send_size_inc(filesystem,
-                                                   backup_time_full,
+                                                   backup_time_base_snapshot,
                                                    backup_time))
         transfer_config = _get_transfer_config(send_size,
                                                self._max_multipart_parts)
@@ -401,7 +410,7 @@ class ZFSjob:
                           'msg="Starting incremental backup."')
 
         with open_snapshot_stream_inc(
-                filesystem, backup_time_full, backup_time) as f:
+                filesystem, backup_time_base_snapshot, backup_time) as f:
             transfer_callback = TransferCallback(self._logger, send_size,
                                                  filesystem, backup_time,
                                                  s3_key)
@@ -419,7 +428,7 @@ class ZFSjob:
 
         backup_size = self._check_backup(s3_key)
         self._backup_db.create_backup(backup_time, 'inc', s3_key,
-                                      backup_time_full, backup_size)
+                                      backup_time_base_snapshot, backup_size)
         self._logger.info(f'filesystem={filesystem} '
                           f'snapshot_name={backup_time} '
                           f's3_key={s3_key} '
@@ -436,6 +445,9 @@ class ZFSjob:
             File system to restore to. Defaults to the file system that the
             backup was taken from.
         """
+        import threading
+        print (threading.get_ident())
+        
         backup_time = backup.backup_time
         backup_size = backup.backup_size
         filesystem = filesystem or backup.filesystem
