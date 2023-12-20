@@ -5,6 +5,7 @@ import json
 from botocore.exceptions import ClientError # noqa
 
 from zfs_uploader import BACKUP_DB_FILE, DATETIME_FORMAT
+from zfs_uploader.utils import derive_s3_key
 
 
 class BackupDB:
@@ -15,7 +16,7 @@ class BackupDB:
         """ ZFS filesystem. """
         return self._filesystem
 
-    def __init__(self, bucket, filesystem):
+    def __init__(self, bucket, filesystem, s3_prefix=None):
         """ Create BackupDB object.
 
         BackupDB is used for storing Backup objects. It does not upload
@@ -27,12 +28,15 @@ class BackupDB:
             S3 Bucket.
         filesystem : str
             ZFS filesystem.
+        s3_prefix: str, optional
+            The s3 prefix to prepend to the backup.db file.
 
         """
         self._filesystem = filesystem
         self._backups = {}
-        self._s3_object = bucket.Object(
-            f'{self._filesystem}/{BACKUP_DB_FILE}')
+
+        s3_key = derive_s3_key(BACKUP_DB_FILE, self.filesystem, s3_prefix)
+        self._s3_object = bucket.Object(s3_key)
 
         # initialize from backup.db file if it exists
         self.download()
