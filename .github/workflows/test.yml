@@ -29,7 +29,7 @@ jobs:
     
     - name: Create S3 bucket
       run: |
-        aws --endpoint-url=http://s3:4566 s3 mb s3://testbucket
+        aws --endpoint-url=http://s3:4566 s3 mb s3://testbucket --debug
     
     - name: Run Flake8
       run: |
