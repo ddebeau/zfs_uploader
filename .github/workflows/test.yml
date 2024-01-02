@@ -7,12 +7,33 @@ jobs:
   test:
     environment: test
     runs-on: ubuntu-20.04
+
+    services:
+      s3:
+        image: localstack/localstack
+        ports:
+           - 4566:4566
+        env:
+          SERVICES: s3
+          AWS_ACCESS_KEY_ID: testkey
+          AWS_SECRET_ACCESS_KEY: testsecret
+          DEFAULT_REGION: us-east-2
+
+
     steps:
     - uses: actions/checkout@v3
     - name: Install Python 3.6
       uses: actions/setup-python@v4
       with:
         python-version: 3.6
+    
+    - name: Create S3 bucket
+      env:
+        AWS_ACCESS_KEY_ID: testkey
+        AWS_SECRET_ACCESS_KEY: testsecret
+      run: |
+        aws --endpoint-url=http://localhost:4566 s3 mb s3://testbucket --region us-east-2
+    
     - name: Run Flake8
       run: |
         pip install --upgrade pip
@@ -32,10 +53,11 @@ jobs:
         /home/runner/work/zfs_uploader/zfs_uploader/disk-image
     - name: Run test suite
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_ACCESS_KEY_ID: testkey
+        AWS_SECRET_ACCESS_KEY: testsecret
         AWS_DEFAULT_REGION: us-east-2
-        S3_BUCKET: zfs-uploader20210609233519641800000001
+        S3_BUCKET: testbucket
+        ENDPOINT: http://localhost:4566
       run: |
         python write_test_config.py
         sudo python -m unittest -v
