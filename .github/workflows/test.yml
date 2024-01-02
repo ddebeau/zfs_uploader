@@ -7,6 +7,14 @@ jobs:
   test:
     environment: test
     runs-on: ubuntu-20.04
+
+    services:
+      s3:
+        image: localstack/localstack
+        ports:
+           - 4566:4566
+
+
     steps:
     - uses: actions/checkout@v3
     - name: Install Python 3.6
