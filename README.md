@@ -202,6 +202,36 @@ full backup (f)
 6.  f f f f f f
 7.  f f f f f f f
 
+## Max backups limit behaviour
+Once the max limit is reached, the program would remove the oldest chain. 
+If a single full exists, a new full would be created and all the past chain deleted.
+The end result would be a single full in this case.
+
+### Limit examples
+
+max_backups = 7
+
+max_incremental_backups_per_full = 3
+
+1. f
+2. fi
+3. fii
+4. fiii
+5. fiiif
+6. fiiifi
+7. fiiifii
+8. fiii
+
+max_backups = 4
+
+max_incremental_backups_per_full = 1
+
+1. f
+2. fi
+3. fif
+4. fifi
+5. fi
+
 ## Miscellaneous
 ### Storage class codes
 - STANDARD
