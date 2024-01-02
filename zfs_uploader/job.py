@@ -560,23 +560,26 @@ class ZFSjob:
             self._logger.info(f'filesystem={self._filesystem} '
                               'msg="Backup limit achieved."')
 
-        deleted_count = 0
-        for backup in backups:
-            backup_time = backup.backup_time
-            s3_key = backup.s3_key
+            # Check how many full backups we have. If only one, we
+            # need to force a new one before deleting the oldest chain
+            full_count = sum(1 for b in backups if b.backup_type == 'full')
+            if full_count <= 1:
+                self._backup_full()
 
-            dependants = any([True if b.dependency == backup_time
-                              else False for b in backups])
-            if dependants:
-                self._logger.info(f's3_key={s3_key} '
-                                  'msg="Backup has dependants. Not '
-                                  'deleting."')
-            else:
+            # Re fetch the backups to make sure we get them all
+            backups = self._backup_db.get_backups()
+
+            # Backups will have the most recent last, so we just need
+            # to drop them in order until we reach the second full
+            delete_list = []
+            for i, backup in enumerate(backups):
+                if i != 0 and backup.backup_type == 'full':
+                    break
+                delete_list.append(backup)
+            delete_list.reverse()
+
+            for backup in delete_list:
                 self._delete_backup(backup)
-                deleted_count += 1
-
-            if len(backups) - deleted_count == self._max_backups:
-                break
 
 
 class TransferCallback:

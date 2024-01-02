@@ -314,25 +314,55 @@ class JobTestsBase:
         self.job._limit_backups()
 
         # Then
-        # Only the oldest incremental backup should be removed.
-        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
-        self.assertEqual(backups_full, backups_full_new)
-
-        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
-        self.assertEqual(backups_inc[1:], backups_inc_new)
-
-        # When
-        self.job._max_backups = 2
-        self.job._limit_backups()
-
-        # Then
-        # The oldest full backup should be removed.
+        # Only one full should remain as we deleted the oldest tree
         backups_full_new = self.job._backup_db.get_backups(backup_type='full')
         self.assertEqual(backups_full[1:], backups_full_new)
 
         backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
         self.assertEqual(backups_inc[1:], backups_inc_new)
 
+        # When
+        self.job._max_backups = 1
+        self.job._limit_backups()
+        # This config would force create a new full and remove the old chain
+
+        # Then
+        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(1, len(backups_full_new))
+
+        # No inc should remain
+        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(0, len(backups_inc_new))
+
+    
+    def test_limit_backups_remove_last_chain(self):
+        """ Test the backup limiter with 3 chains, deleting the oldest """
+
+        # Given
+        self.job._max_incremental_backups_per_full = 1
+
+        for _ in range(6):
+            self.job.start()
+
+        backups_full = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(3, len(backups_full))
+
+        backups_inc = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(3, len(backups_inc))
+
+        # When
+        self.job._max_backups = 5
+        self.job._limit_backups()
+
+        # Then
+        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(backups_full[1:], backups_full_new)
+
+        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(backups_inc[1:], backups_inc_new)
+
+    
+    
     def test_limit_backups_one_full(self):
         """ Test the backup limiter when there's only one full backup. """
 
@@ -351,25 +381,15 @@ class JobTestsBase:
         self.job._limit_backups()
 
         # Then
-        # Only the oldest incremental backup should be removed.
+        # Since there is only one full and we reached the limit, 
+        # a new full is created and the old chain deleted
         backups_full_new = self.job._backup_db.get_backups(backup_type='full')
-        self.assertEqual(backups_full, backups_full_new)
+        self.assertEqual(1, len(backups_full_new))
 
         backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
-        # Can only nuke the last backup as the others have dependants
-        self.assertEqual(backups_inc[:1], backups_inc_new)
-
-        # When
-        self.job._max_backups = 1
-        self.job._limit_backups()
-
-        # Then
-        # Only the full backup should remain.
-        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
-        self.assertEqual(backups_full, backups_full_new)
-
-        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
+        # No incremental remains
         self.assertEqual(0, len(backups_inc_new))
+
 
     def test_limit_backups_all_full(self):
         """ Test the backup limiter when it's only full backups. """
