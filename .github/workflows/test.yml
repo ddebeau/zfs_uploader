@@ -29,9 +29,6 @@ jobs:
     
     - name: Create S3 bucket
       run: |
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
         aws --endpoint-url=http://s3:4566 s3 mb s3://testbucket
     
     - name: Run Flake8
