@@ -7,10 +7,9 @@ jobs:
   test:
     environment: test
     runs-on: ubuntu-20.04
-
     services:
       s3:
-        image: localstack/localstack
+        image: localstack/localstack:s3-latest
         ports:
            - 4566:4566
         env:
@@ -18,22 +17,18 @@ jobs:
           AWS_ACCESS_KEY_ID: testkey
           AWS_SECRET_ACCESS_KEY: testsecret
           DEFAULT_REGION: us-east-2
-
-
     steps:
     - uses: actions/checkout@v3
     - name: Install Python 3.6
       uses: actions/setup-python@v4
       with:
         python-version: 3.6
-    
     - name: Create S3 bucket
       env:
         AWS_ACCESS_KEY_ID: testkey
         AWS_SECRET_ACCESS_KEY: testsecret
       run: |
         aws --endpoint-url=http://localhost:4566 s3 mb s3://testbucket --region us-east-2
-    
     - name: Run Flake8
       run: |
         pip install --upgrade pip
