@@ -551,8 +551,6 @@ class ZFSjob:
 
     def _limit_backups(self):
         """ Limit number of incremental and full backups.
-
-        Only backups with no dependants are removed.
         """
         backups = self._backup_db.get_backups()
 
@@ -560,26 +558,23 @@ class ZFSjob:
             self._logger.info(f'filesystem={self._filesystem} '
                               'msg="Backup limit achieved."')
 
-            # Check how many full backups we have. If only one, we
-            # need to force a new one before deleting the oldest chain
-            full_count = sum(1 for b in backups if b.backup_type == 'full')
-            if full_count <= 1:
-                self._backup_full()
+            # Check if the first full has dependants. If not, just delete
+            dependants = [True if b.dependency == backups[0].backup_time
+                          else False for b in backups]
+            if sum(dependants) == 0:
+                self._delete_backup(backups[0])
+            else:
+                # If it has dependants, delete the dependant tree up to
+                # the second full or the end
+                for backup in backups[1:]:
+                    if backup.backup_type == 'full':
+                        break
+                    self._delete_backup(backup)
 
-            # Re fetch the backups to make sure we get them all
+            # Do we have a single remaining full and no incs? Create a new inc
             backups = self._backup_db.get_backups()
-
-            # Backups will have the most recent last, so we just need
-            # to drop them in order until we reach the second full
-            delete_list = []
-            for i, backup in enumerate(backups):
-                if i != 0 and backup.backup_type == 'full':
-                    break
-                delete_list.append(backup)
-            delete_list.reverse()
-
-            for backup in delete_list:
-                self._delete_backup(backup)
+            if len(backups) == 1:
+                self._backup_incremental(backups[0].backup_time)
 
 
 class TransferCallback:
