@@ -8,6 +8,7 @@ config['DEFAULT'] = {
     'region': os.environ['AWS_DEFAULT_REGION'],
     'access_key': os.environ['AWS_ACCESS_KEY_ID'],
     'secret_key': os.environ['AWS_SECRET_ACCESS_KEY'],
+    'endpoint': os.environ['ENDPOINT'],
     'storage_class': 'STANDARD'
 }
 config['test-pool/test-filesystem'] = {
