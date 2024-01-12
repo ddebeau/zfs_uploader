@@ -4,6 +4,7 @@ import os
 import sys
 
 from zfs_uploader.job import ZFSjob
+from zfs_uploader.zfs import (list_children)
 
 
 class Config:
@@ -59,31 +60,47 @@ class Config:
                 if cron:
                     cron_dict = _create_cron_dict(cron)
 
-                self._jobs[k] = (
-                    ZFSjob(
-                        bucket_name,
-                        access_key,
-                        secret_key,
-                        filesystem,
-                        prefix=v.get('prefix') or default.get('prefix'),
-                        region=v.get('region') or default.get('region'),
-                        endpoint=v.get('endpoint') or default.get('endpoint'),
-                        cron=cron_dict,
-                        max_snapshots=(v.getint('max_snapshots') or
-                                       default.getint('max_snapshots')),
-                        max_backups=(
+                def add_job(filesystem):
+                    self._jobs[filesystem] = (
+                        ZFSjob(
+                            bucket_name,
+                            access_key,
+                            secret_key,
+                            filesystem,
+                            prefix=v.get('prefix') or default.get('prefix'),
+                            region=v.get('region') or default.get('region'),
+                            endpoint=v.get('endpoint') or default.get('endpoint'),
+                            cron=cron_dict,
+                            max_snapshots=(v.getint('max_snapshots') or
+                                           default.getint('max_snapshots')),
+                            max_backups=(
                                 v.getint('max_backups') or
                                 default.getint('max_backups')),
-                        max_incremental_backups_per_full=(
+                            max_incremental_backups_per_full=(
                                 v.getint('max_incremental_backups_per_full') or
                                 default.getint('max_incremental_backups_per_full')), # noqa
-                        storage_class=(v.get('storage_class') or
-                                       default.get('storage_class')),
-                        max_multipart_parts=(
+                            storage_class=(v.get('storage_class') or
+                                           default.get('storage_class')),
+                            max_multipart_parts=(
                                 v.getint('max_multipart_parts') or
                                 default.getint('max_multipart_parts'))
+                        )
                     )
-                )
+
+                if v.get('recursive') == True:
+                    children = list_children(filesystem)
+
+                    if len(children) == 0:
+                        self._logger.critical(f'file_path={file_path} '
+                                              f'filesystem={filesystem}'
+                                              'msg="ZFS dataset does not exist"'
+                                              )
+                        sys.exit(1)
+
+                    for child in children:
+                        add_job(child)
+                else:
+                    add_job(filesystem)
 
 
 def _create_cron_dict(cron):

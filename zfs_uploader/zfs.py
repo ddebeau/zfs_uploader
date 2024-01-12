@@ -27,6 +27,12 @@ def list_snapshots():
 
     return snapshots
 
+def list_children(filesystem):
+    """ List filesystem children for recursive backup. """
+    cmd = ['zfs', 'list', '-o', 'name', '-H', '-r', f'{filesystem}']
+    out = subprocess.run(cmd, **SUBPROCESS_KWARGS)
+
+    return out.stdout.splitlines()
 
 def create_snapshot(filesystem, snapshot_name):
     """ Create filesystem snapshot. """
