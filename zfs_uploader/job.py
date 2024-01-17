@@ -211,7 +211,7 @@ class ZFSjob:
 
         # if we want incremental backups and multiple full backups
         elif self._max_incremental_backups_per_full:
-            full_backup_time = backup.backup_time 
+            full_backup_time = backup.backup_time
 
             dependants = [True if b.dependency == full_backup_time
                           else False for b in backups_inc]
