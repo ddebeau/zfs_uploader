@@ -81,7 +81,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -107,7 +107,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -133,7 +133,7 @@ class JobTestsBase:
         # When
         self.job.restore()
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -184,7 +184,7 @@ class JobTestsBase:
         backups = self.job._backup_db.get_backup_times('inc')
         self.job.restore(backups[0])
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -213,7 +213,7 @@ class JobTestsBase:
         backups = self.job._backup_db.get_backup_times('full')
         self.job.restore(backups[0])
         if self.encrypted_test:
-            out = load_key(self.job.filesystem, 'file:///test_key')
+            out = load_key(self.job.filesystem, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.job.filesystem)
@@ -259,7 +259,7 @@ class JobTestsBase:
         # When
         self.job.restore(filesystem=self.filesystem_2)
         if self.encrypted_test:
-            out = load_key(self.filesystem_2, 'file:///test_key')
+            out = load_key(self.filesystem_2, 'file:///tmp/test_key')
             self.assertEqual(0, out.returncode, msg=out.stderr)
 
             out = mount_filesystem(self.filesystem_2)
@@ -314,44 +314,7 @@ class JobTestsBase:
         self.job._limit_backups()
 
         # Then
-        # Only the oldest incremental backup should be removed.
-        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
-        self.assertEqual(backups_full, backups_full_new)
-
-        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
-        self.assertEqual(backups_inc[1:], backups_inc_new)
-
-        # When
-        self.job._max_backups = 2
-        self.job._limit_backups()
-
-        # Then
-        # The oldest full backup should be removed.
-        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
-        self.assertEqual(backups_full[1:], backups_full_new)
-
-        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
-        self.assertEqual(backups_inc[1:], backups_inc_new)
-
-    def test_limit_backups_one_full(self):
-        """ Test the backup limiter when there's only one full backup. """
-
-        # Given
-        for _ in range(3):
-            self.job.start()
-
-        backups_full = self.job._backup_db.get_backups(backup_type='full')
-        self.assertEqual(1, len(backups_full))
-
-        backups_inc = self.job._backup_db.get_backups(backup_type='inc')
-        self.assertEqual(2, len(backups_inc))
-
-        # When
-        self.job._max_backups = 2
-        self.job._limit_backups()
-
-        # Then
-        # Only the oldest incremental backup should be removed.
+        # Two fulls should remain as we only deleted the oldest incremental
         backups_full_new = self.job._backup_db.get_backups(backup_type='full')
         self.assertEqual(backups_full, backups_full_new)
 
@@ -361,17 +324,46 @@ class JobTestsBase:
         # When
         self.job._max_backups = 1
         self.job._limit_backups()
+        # This config would delete the fist full (oldest with no deps)
 
         # Then
-        # Only the full backup should remain.
+        backups_full_new = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(backups_full[1:], backups_full_new)
+
+        # Last inc should remain
+        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(backups_inc[1:], backups_inc_new)
+
+    def test_limit_backups_squash_incs(self):
+        """ Test the backup limiter one full, 3 incs and squash """
+
+        # Given
+        self.job._max_incremental_backups_per_full = 5
+
+        for _ in range(4):
+            self.job.start()
+
+        backups_full = self.job._backup_db.get_backups(backup_type='full')
+        self.assertEqual(1, len(backups_full))
+
+        backups_inc = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(3, len(backups_inc))
+
+        # When
+        self.job._max_backups = 2
+        self.job._limit_backups()
+
+        # Then
         backups_full_new = self.job._backup_db.get_backups(backup_type='full')
         self.assertEqual(backups_full, backups_full_new)
 
+        # A new squashed inc should be created and its not on the first list
         backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
-        self.assertEqual(0, len(backups_inc_new))
+        self.assertEqual(1, len(backups_inc_new))
+        self.assertNotEqual(backups_inc_new[:1], backups_inc)
 
-    def test_limit_backups_all_full(self):
-        """ Test the backup limiter when it's only full backups. """
+    def test_limit_backups_only_fulls(self):
+        """ Test the backup limiter when there's only full backups """
 
         # Given
         self.job._max_incremental_backups_per_full = 0
@@ -389,9 +381,11 @@ class JobTestsBase:
         self.job._limit_backups()
 
         # Then
-        # Only the oldest full backup should be removed.
         backups_full_new = self.job._backup_db.get_backups(backup_type='full')
         self.assertEqual(backups_full[1:], backups_full_new)
+
+        backups_inc_new = self.job._backup_db.get_backups(backup_type='inc')
+        self.assertEqual(0, len(backups_inc_new))
 
 
 class JobTestsUnencrypted(JobTestsBase, TestCase):
@@ -436,11 +430,11 @@ class JobTestsEncrypted(JobTestsBase, TestCase):
         self.test_file = f'/{self.job.filesystem}/test_file'
         self.test_data = str(list(range(100_000)))
 
-        with open('/test_key', 'w') as f:
+        with open('/tmp/test_key', 'w') as f:
             f.write('test_key')
         out = subprocess.run(
             ['zfs', 'create', '-o', 'encryption=on', '-o',
-             'keyformat=passphrase', '-o', 'keylocation=file:///test_key',
+             'keyformat=passphrase', '-o', 'keylocation=file:///tmp/test_key',
              self.job.filesystem],
             **SUBPROCESS_KWARGS
         )
